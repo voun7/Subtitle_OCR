@@ -20,7 +20,7 @@ class TRDGDataset(VisionDataset):
     def __getitem__(self, index: int) -> tuple:
         path, target, bbox = self.image_files[index], self.labels[index], self.bboxes[index]
         image = self.loader(str(path))
-        if self.transform is not None:
+        if self.transform:
             image = self.transform(image)
         return image, target, bbox
 
@@ -56,7 +56,8 @@ class TRDGDataset(VisionDataset):
         return bboxes
 
 
-def create_dataloaders(data_dir: str, batch_size: int, split_ratio: float = 0.8, shuffle: bool = True) -> tuple:
+def create_dataloaders(data_dir: str, batch_size: int, split_ratio: float = 0.8, shuffle: bool = True) \
+        -> tuple[DataLoader, DataLoader]:
     # Create an instance of the TRDGDataset.
     dataset = TRDGDataset(data_dir, transform=ToTensor())
     # Perform train-test split.
