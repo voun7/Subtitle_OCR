@@ -4,7 +4,7 @@ import subprocess
 def generate_trdg_images():
     command = [
         "trdg",
-        "--output_dir", "data/trdg_synthetic_images",  # The output directory.
+        "--output_dir", "training_data/chinese_data/trdg_synthetic_images",  # The output directory.
         "--language", "cn",  # The language to use.
         "--count", "1000",  # The number of images to be created.
         "--random_sequences",  # Use random sequences as the source text for the generation.
@@ -13,7 +13,7 @@ def generate_trdg_images():
         "--format", "150",  # Define the height of the produced images if horizontal, else the width.
         "--thread_count", "6",  # Define the number of thread to use for image generation.
         "--background", "3",  # Background to use. 0: Gaussian Noise, 1: Plain white, 2: Quasi crystal, 3: Image.
-        "--image_dir", "data/#Background_images",  # Define an image directory to use when background is set to image.
+        "--image_dir", "training_data/#Background_images",  # Image directory to use when background is set to image.
         "--output_bboxes", "1",  # Define if the generator will return bounding boxes for the text.
         "--text_color", "#FFFFFF",  # Text's color. "#000000,#FFFFFF" for black to white range.
         "--space_width", "0",  # Define the width of the spaces between words
