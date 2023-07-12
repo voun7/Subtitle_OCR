@@ -1,7 +1,10 @@
 import subprocess
 
 
-def generate_trdg_images():
+def generate_trdg_images() -> None:
+    """
+    Use trdg package to generate images with text for training model.
+    """
     command = [
         "trdg",
         "--output_dir", "training_data/chinese_data/trdg_synthetic_images",  # The output directory.
