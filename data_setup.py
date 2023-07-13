@@ -18,11 +18,11 @@ class TRDGDataset(VisionDataset):
         self.image_files, self.labels, self.bboxes = self.load_data()
 
     def __getitem__(self, index: int) -> tuple:
-        path, target, bbox = self.image_files[index], self.labels[index], self.bboxes[index]
+        path, target, bboxes = self.image_files[index], self.labels[index], self.bboxes[index]
         image = self.loader(str(path))
         if self.transform:
             image = self.transform(image)
-        return image, target, bbox
+        return image, target, bboxes
 
     def __len__(self) -> int:
         return len(self.image_files)

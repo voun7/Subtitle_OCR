@@ -10,8 +10,7 @@ def generate_trdg_images() -> None:
         "--output_dir", "training_data/chinese_data/trdg_synthetic_images",  # The output directory.
         "--language", "cn",  # The language to use.
         "--count", "20",  # The number of images to be created.
-        "--random_sequences",  # Use random sequences as the source text for the generation.
-        "--length", "16",  # Define how many words should be included in each generated sample.
+        "--length", "18",  # Define how many words should be included in each generated sample.
         "--random",  # Define if the produced string will have variable word count (with --length being the maximum).
         "--format", "100",  # Define the height of the produced images if horizontal, else the width.
         "--width", "1900",  # Define the width of the resulting image
@@ -21,10 +20,11 @@ def generate_trdg_images() -> None:
         "--output_bboxes", "1",  # Define if the generator will return bounding boxes for the text.
         "--text_color", "#FFFFFF",  # Text's color. "#000000,#FFFFFF" for black to white range.
         "--space_width", "0",  # Define the width of the spaces between words
-        # "--character_spacing", "0",  # Define the width of the spaces between characters. 2 means two pixels.
         "--margins", "15,15,15,15",  # Define the margins around the text when rendered. In pixels.
-        "--fit",  # Apply a tight crop around the rendered text.
-        # "--use_wikipedia",  # Use Wikipedia as the source text for the generation.
+        "--fit",  # Apply a tight crop around the rendered text
+        # Rarely needed options.
+        # "--character_spacing", "0",  # Define the width of the spaces between characters. 2 means two pixels.
+        # "--random_sequences",  # Use random sequences as the source text for the generation.
         # "--font_dir", "data/#Fonts",  # Define a font directory to be used.
         # "--word_split",  # Split on words instead of on characters.
     ]
