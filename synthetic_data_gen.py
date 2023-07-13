@@ -11,9 +11,10 @@ def generate_trdg_images() -> None:
         "--language", "cn",  # The language to use.
         "--count", "20",  # The number of images to be created.
         "--random_sequences",  # Use random sequences as the source text for the generation.
-        "--length", "20",  # Define how many words should be included in each generated sample.
+        "--length", "16",  # Define how many words should be included in each generated sample.
         "--random",  # Define if the produced string will have variable word count (with --length being the maximum).
-        "--format", "150",  # Define the height of the produced images if horizontal, else the width.
+        "--format", "100",  # Define the height of the produced images if horizontal, else the width.
+        "--width", "1900",  # Define the width of the resulting image
         "--thread_count", "6",  # Define the number of thread to use for image generation.
         "--background", "3",  # Background to use. 0: Gaussian Noise, 1: Plain white, 2: Quasi crystal, 3: Image.
         "--image_dir", "training_data/#Background_images",  # Image directory to use when background is set to image.
