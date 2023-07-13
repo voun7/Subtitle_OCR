@@ -1,4 +1,3 @@
-# A file to prepare and download data if needed.
 import os
 from pathlib import Path
 
