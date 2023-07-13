@@ -1,37 +1,42 @@
+"""
+Trains a PyTorch image classification model using device-agnostic code.
+"""
 import torch
 
 import data_setup
 import engine
 import model_builder
-import synthetic_data_gen
 import utils
 
 
-def train(data_dir, device, batch_size, num_epochs, hidden_units, learning_rate):
+def main() -> None:
+    # Setup hyperparameters
+    num_epochs = 5
+    batch_size = 32
+    learning_rate = 0.001
+
+    # Setup directories
+    data_dir = "training_data/chinese_data/trdg_synthetic_images"
+
+    # Setup target device
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+
     # Create DataLoaders with help from data_setup.py
     train_dataloader, test_dataloader = data_setup.create_dataloaders(data_dir, batch_size)
 
-    # Iterate over the training data loader and perform training operations
-    # for images, image_texts, bboxes in train_dataloader:
-    #     Training code goes here
+    # Create model with help from model_builder.py
+    model = model_builder.TextRecognitionModel().to(device)
 
-    # Iterate over the testing data loader and perform testing operations
-    # for image, image_text, image_bboxes in test_dataloader:
-    #     Testing code goes here
+    # Set loss and optimizer
+    loss_fn = torch.nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
+    # Start training with help from engine.py
+    engine.train(model=model, train_dataloader=train_dataloader, test_dataloader=test_dataloader, loss_fn=loss_fn,
+                 optimizer=optimizer, epochs=num_epochs, device=device)
 
-def main() -> None:
-    # Setup directories
-    data_dir = "training_data/chinese_data/trdg_synthetic_images"
-    # Setup target device
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    # Setup hyperparameters
-    batch_size = 10
-    num_epochs = 5
-    hidden_units = 10
-    learning_rate = 0.001
-
-    train(data_dir, device, batch_size, num_epochs, hidden_units, learning_rate)
+    # Save the model with help from utils.py
+    utils.save_model(model=model, target_dir="models", model_name="text_rec_model.pth")
 
 
 if __name__ == '__main__':
