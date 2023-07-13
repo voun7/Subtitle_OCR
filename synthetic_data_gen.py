@@ -9,7 +9,7 @@ def generate_trdg_images() -> None:
         "trdg",
         "--output_dir", "training_data/chinese_data/trdg_synthetic_images",  # The output directory.
         "--language", "cn",  # The language to use.
-        "--count", "20",  # The number of images to be created.
+        "--count", "50",  # The number of images to be created.
         "--length", "18",  # Define how many words should be included in each generated sample.
         "--random",  # Define if the produced string will have variable word count (with --length being the maximum).
         "--format", "100",  # Define the height of the produced images if horizontal, else the width.
