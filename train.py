@@ -14,6 +14,10 @@ def main() -> None:
     num_epochs = 5
     batch_size = 32
     learning_rate = 0.001
+    num_classes = 1000  # Assuming text consists of 26 alphabet characters.
+    input_height = 100
+    input_width = 1900
+    hidden_size = 256
 
     # Setup directories
     data_dir = "training_data/chinese_data/trdg_synthetic_images"
@@ -25,7 +29,7 @@ def main() -> None:
     train_dataloader, test_dataloader = data_setup.create_dataloaders(data_dir, batch_size)
 
     # Create model with help from model_builder.py
-    model = model_builder.TextRecognitionModel().to(device)
+    model = model_builder.TextRecognitionModel(num_classes, input_height, input_width, hidden_size).to(device)
 
     # Set loss and optimizer
     loss_fn = torch.nn.CrossEntropyLoss()
