@@ -3,10 +3,9 @@ Trains a PyTorch image classification model using device-agnostic code.
 """
 import torch
 
-import data_setup
-import engine
+from data import data_setup
+from utilities import engine, utils
 import model_builder
-import utils
 
 
 def main() -> None:
