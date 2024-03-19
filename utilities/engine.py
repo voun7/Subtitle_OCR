@@ -1,161 +1,424 @@
-"""
-Contains functions for training and testing a PyTorch model.
-"""
+import datetime
+import random
+
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
-from torch.nn import Module
-from torch.optim import Optimizer
-from torch.utils.data import DataLoader
-from tqdm.auto import tqdm
+import torch.nn as nn
+from torch.utils.tensorboard import SummaryWriter
 
 
-def train_step(model: Module, dataloader: DataLoader, loss_fn: Module, optimizer: Optimizer, device: str) \
-        -> tuple[float, float]:
-    """Trains a PyTorch model for a single epoch.
-    Turns a target PyTorch model to training mode and then runs through all the required training steps (forward
-    pass, loss calculation, optimizer step).
+class ModelTrainer:
+    def __init__(self, model, loss_fn, optimizer):
+        # Here we define the attributes of our class
 
-    Args:
-    model: A PyTorch model to be trained.
-    dataloader: A DataLoader instance for the model to be trained on.
-    loss_fn: A PyTorch loss function to minimize.
-    optimizer: A PyTorch optimizer to help minimize the loss function.
-    device: A target device to compute on (e.g. "cuda" or "cpu").
+        # We start by storing the arguments as attributes
+        # to use them later
+        self.model = model
+        self.loss_fn = loss_fn
+        self.optimizer = optimizer
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        # Let's send the model to the specified device right away
+        self.model.to(self.device)
 
-    Returns:
-    A tuple of training loss and training accuracy metrics.
-    In the form (train_loss, train_accuracy). For example: (0.1112, 0.8743)
-    """
-    # Put model in train mode
-    model.train()
+        # These attributes are defined here, but since they are
+        # not informed at the moment of creation, we keep them None
+        self.train_loader = None
+        self.val_loader = None
+        self.writer = None
 
-    # Setup train loss and train accuracy values
-    train_loss, train_acc = 0, 0
+        # These attributes are going to be computed internally
+        self.losses = []
+        self.val_losses = []
+        self.total_epochs = 0
 
-    # Loop through data loader data batches
-    for batch, (X, y) in enumerate(dataloader):
-        # Send data to target device
-        X, y = X.to(device), y.to(device)
+        self.visualization = {}
+        self.handles = {}
 
-        # 1. Forward pass
-        y_pred = model(X)
+        # Creates the train_step function for our model,
+        # loss function and optimizer
+        # Note: there are NO ARGS there! It makes use of the class
+        # attributes directly
+        self.train_step_fn = self._make_train_step_fn()
+        # Creates the val_step function for our model and loss
+        self.val_step_fn = self._make_val_step_fn()
 
-        # 2. Calculate  and accumulate loss
-        loss = loss_fn(y_pred, y)
-        train_loss += loss.item()
+    def to(self, device):
+        # This method allows the user to specify a different device
+        # It sets the corresponding attribute (to be used later in
+        # the mini-batches) and sends the model to the device
+        try:
+            self.device = device
+            self.model.to(self.device)
+        except RuntimeError:
+            self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+            print(f"Couldn't send it to {device}, sending it to {self.device} instead.")
+            self.model.to(self.device)
 
-        # 3. Optimizer zero grad
-        optimizer.zero_grad()
+    def set_loaders(self, train_loader, val_loader=None):
+        # This method allows the user to define which train_loader (and val_loader, optionally) to use
+        # Both loaders are then assigned to attributes of the class
+        # So they can be referred to later
+        self.train_loader = train_loader
+        self.val_loader = val_loader
 
-        # 4. Loss backward
-        loss.backward()
+    def set_tensorboard(self, name, folder='runs'):
+        # This method allows the user to define a SummaryWriter to interface with TensorBoard
+        suffix = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+        self.writer = SummaryWriter(f'{folder}/{name}_{suffix}')
 
-        # 5. Optimizer step
-        optimizer.step()
+    def _make_train_step_fn(self):
+        # This method does not need ARGS... it can refer to
+        # the attributes: self.model, self.loss_fn and self.optimizer
 
-        # Calculate and accumulate accuracy metric across all batches
-        y_pred_class = torch.argmax(torch.softmax(y_pred, dim=1), dim=1)
-        train_acc += (y_pred_class == y).sum().item() / len(y_pred)
+        # Builds function that performs a step in the train loop
+        def perform_train_step_fn(x, y):
+            # Sets model to TRAIN mode
+            self.model.train()
 
-    # Adjust metrics to get average loss and accuracy per batch 
-    train_loss = train_loss / len(dataloader)
-    train_acc = train_acc / len(dataloader)
-    return train_loss, train_acc
+            # Step 1 - Computes our model's predicted output - forward pass
+            yhat = self.model(x)
+            # Step 2 - Computes the loss
+            loss = self.loss_fn(yhat, y)
+            # Step 3 - Computes gradients for both "a" and "b" parameters
+            loss.backward()
+            # Step 4 - Updates parameters using gradients and the learning rate
+            self.optimizer.step()
+            self.optimizer.zero_grad()
 
+            # Returns the loss
+            return loss.item()
 
-def test_step(model: Module, dataloader: DataLoader, loss_fn: Module, device: str) -> tuple[float, float]:
-    """Tests a PyTorch model for a single epoch.
+        # Returns the function that will be called inside the train loop
+        return perform_train_step_fn
 
-    Turns a target PyTorch model to "eval" mode and then performs
-    a forward pass on a testing dataset.
+    def _make_val_step_fn(self):
+        # Builds function that performs a step in the validation loop
+        def perform_val_step_fn(x, y):
+            # Sets model to EVAL mode
+            self.model.eval()
 
-    Args:
-    model: A PyTorch model to be tested.
-    dataloader: A DataLoader instance for the model to be tested on.
-    loss_fn: A PyTorch loss function to calculate loss on the test data.
-    device: A target device to compute on (e.g. "cuda" or "cpu").
+            # Step 1 - Computes our model's predicted output - forward pass
+            yhat = self.model(x)
+            # Step 2 - Computes the loss
+            loss = self.loss_fn(yhat, y)
+            # There is no need to compute Steps 3 and 4, since we don't update parameters during evaluation
+            return loss.item()
 
-    Returns:
-    A tuple of testing loss and testing accuracy metrics.
-    In the form (test_loss, test_accuracy). For example: (0.0223, 0.8985)
-    """
-    # Put model in eval mode
-    model.eval()
+        return perform_val_step_fn
 
-    # Setup test loss and test accuracy values
-    test_loss, test_acc = 0, 0
+    def _mini_batch(self, validation=False):
+        # The mini-batch can be used with both loaders
+        # The argument `validation`defines which loader and
+        # corresponding step function is going to be used
+        if validation:
+            data_loader = self.val_loader
+            step_fn = self.val_step_fn
+        else:
+            data_loader = self.train_loader
+            step_fn = self.train_step_fn
 
-    # Turn on inference context manager
-    with torch.inference_mode():
-        # Loop through DataLoader batches
-        for batch, (X, y) in enumerate(dataloader):
-            # Send data to target device
-            X, y = X.to(device), y.to(device)
+        if data_loader is None:
+            return None
 
-            # 1. Forward pass
-            test_pred_logits = model(X)
+        # Once the data loader and step function, this is the same
+        # mini-batch loop we had before
+        mini_batch_losses = []
+        for x_batch, y_batch in data_loader:
+            x_batch = x_batch.to(self.device)
+            y_batch = y_batch.to(self.device)
 
-            # 2. Calculate and accumulate loss
-            loss = loss_fn(test_pred_logits, y)
-            test_loss += loss.item()
+            mini_batch_loss = step_fn(x_batch, y_batch)
+            mini_batch_losses.append(mini_batch_loss)
 
-            # Calculate and accumulate accuracy
-            test_pred_labels = test_pred_logits.argmax(dim=1)
-            test_acc += ((test_pred_labels == y).sum().item() / len(test_pred_labels))
+        loss = np.mean(mini_batch_losses)
+        return loss
 
-    # Adjust metrics to get average loss and accuracy per batch 
-    test_loss = test_loss / len(dataloader)
-    test_acc = test_acc / len(dataloader)
-    return test_loss, test_acc
+    def set_seed(self, seed=42):
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        torch.manual_seed(seed)
+        np.random.seed(seed)
+        random.seed(seed)
+        try:
+            self.train_loader.sampler.generator.manual_seed(seed)
+        except AttributeError:
+            pass
 
+    def train(self, n_epochs, seed=42):
+        # To ensure reproducibility of the training process
+        self.set_seed(seed)
 
-def train(model: Module, train_dataloader: DataLoader, test_dataloader: DataLoader, optimizer: Optimizer,
-          loss_fn: Module, epochs: int, device: str) -> dict[str, list]:
-    """Trains and tests a PyTorch model.
+        for epoch in range(n_epochs):
+            # Keeps track of the numbers of epochs
+            # by updating the corresponding attribute
+            self.total_epochs += 1
 
-    Passes a target PyTorch models through train_step() and test_step()
-    functions for a number of epochs, training and testing the model
-    in the same epoch loop.
+            # inner loop
+            # Performs training using mini-batches
+            loss = self._mini_batch(validation=False)
+            self.losses.append(loss)
 
-    Calculates, prints and stores evaluation metrics throughout.
+            # VALIDATION
+            # no gradients in validation!
+            with torch.no_grad():
+                # Performs evaluation using mini-batches
+                val_loss = self._mini_batch(validation=True)
+                self.val_losses.append(val_loss)
 
-    Args:
-    model: A PyTorch model to be trained and tested.
-    train_dataloader: A DataLoader instance for the model to be trained on.
-    test_dataloader: A DataLoader instance for the model to be tested on.
-    optimizer: A PyTorch optimizer to help minimize the loss function.
-    loss_fn: A PyTorch loss function to calculate loss on both datasets.
-    epochs: An integer indicating how many epochs to train for.
-    device: A target device to compute on (e.g. "cuda" or "cpu").
+            # If a SummaryWriter has been set...
+            if self.writer:
+                scalars = {'training': loss}
+                if val_loss is not None:
+                    scalars.update({'validation': val_loss})
+                # Records both losses for each epoch under the main tag "loss"
+                self.writer.add_scalars(main_tag='loss',
+                                        tag_scalar_dict=scalars,
+                                        global_step=epoch)
 
-    Returns:
-    A dictionary of training and testing loss as well as training and
-    testing accuracy metrics. Each metric has a value in a list for 
-    each epoch.
-    In the form: {train_loss: [...], train_acc: [...], test_loss: [...], test_acc: [...]}
-    For example if training for epochs=2: {train_loss: [2.0616, 1.0537], train_acc: [0.3945, 0.3945],
-                                            test_loss: [1.2641, 1.5706], test_acc: [0.3400, 0.2973]}
-    """
-    # Create empty results dictionary
-    results = {"train_loss": [], "train_acc": [], "test_loss": [], "test_acc": []}
+        if self.writer:
+            # Closes the writer
+            self.writer.close()
 
-    # Make sure model on target device
-    model.to(device)
+    def save_checkpoint(self, filename):
+        # Builds dictionary with all elements for resuming training
+        checkpoint = {'epoch': self.total_epochs,
+                      'model_state_dict': self.model.state_dict(),
+                      'optimizer_state_dict': self.optimizer.state_dict(),
+                      'loss': self.losses,
+                      'val_loss': self.val_losses}
 
-    # Loop through training and testing steps for a number of epochs
-    for epoch in tqdm(range(epochs)):
-        train_loss, train_acc = train_step(model=model, dataloader=train_dataloader, loss_fn=loss_fn,
-                                           optimizer=optimizer, device=device)
-        test_loss, test_acc = test_step(model=model, dataloader=test_dataloader, loss_fn=loss_fn, device=device)
+        torch.save(checkpoint, filename)
 
-        # Print out what's happening
-        print(f"Epoch: {epoch + 1} | train_loss: {train_loss:.4f} | train_acc: {train_acc:.4f} | "
-              f"test_loss: {test_loss:.4f} | test_acc: {test_acc:.4f}")
+    def load_checkpoint(self, filename):
+        # Loads dictionary
+        checkpoint = torch.load(filename)
 
-        # Update results dictionary
-        results["train_loss"].append(train_loss)
-        results["train_acc"].append(train_acc)
-        results["test_loss"].append(test_loss)
-        results["test_acc"].append(test_acc)
+        # Restore state for model and optimizer
+        self.model.load_state_dict(checkpoint['model_state_dict'])
+        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
-    # Return the filled results at the end of the epochs
-    return results
+        self.total_epochs = checkpoint['epoch']
+        self.losses = checkpoint['loss']
+        self.val_losses = checkpoint['val_loss']
+
+        self.model.train()  # always use TRAIN for resuming training
+
+    def predict(self, x):
+        # Set is to evaluation mode for predictions
+        self.model.eval()
+        # Takes aNumpy input and make it a float tensor
+        x_tensor = torch.as_tensor(x).float()
+        # Send input to device and uses model for prediction
+        y_hat_tensor = self.model(x_tensor.to(self.device))
+        # Set it back to train mode
+        self.model.train()
+        # Detaches it, brings it to CPU and back to Numpy
+        return y_hat_tensor.detach().cpu().numpy()
+
+    def plot_losses(self):
+        fig = plt.figure(figsize=(10, 4))
+        plt.plot(self.losses, label='Training Loss', c='b')
+        plt.plot(self.val_losses, label='Validation Loss', c='r')
+        plt.yscale('log')
+        plt.xlabel('Epochs')
+        plt.ylabel('Loss')
+        plt.legend()
+        plt.tight_layout()
+        return fig
+
+    def add_graph(self):
+        # Fetches a single mini-batch so we can use add_graph
+        if self.train_loader and self.writer:
+            x_sample, y_sample = next(iter(self.train_loader))
+            self.writer.add_graph(self.model, x_sample.to(self.device))
+
+    def count_parameters(self):
+        return sum(p.numel() for p in self.model.parameters() if p.requires_grad)
+
+    @staticmethod
+    def _visualize_tensors(axs, x, y=None, yhat=None, layer_name='', title=None):
+        # The number of images is the number of subplots in a row
+        n_images = len(axs)
+        # Gets max and min values for scaling the grayscale
+        minv, maxv = np.min(x[:n_images]), np.max(x[:n_images])
+        # For each image
+        for j, image in enumerate(x[:n_images]):
+            ax = axs[j]
+            # Sets title, labels, and removes ticks
+            if title is not None:
+                ax.set_title('{} #{}'.format(title, j), fontsize=12)
+            ax.set_ylabel(
+                '{}\n{}x{}'.format(layer_name, *np.atleast_2d(image).shape),
+                rotation=0, labelpad=40
+            )
+            xlabel1 = '' if y is None else '\nLabel: {}'.format(y[j])
+            xlabel2 = '' if yhat is None else '\nPredicted: {}'.format(yhat[j])
+            xlabel = '{}{}'.format(xlabel1, xlabel2)
+            if len(xlabel):
+                ax.set_xlabel(xlabel, fontsize=12)
+            ax.set_xticks([])
+            ax.set_yticks([])
+
+            # Plots weight as an image
+            ax.imshow(
+                np.atleast_2d(image.squeeze()),
+                cmap='gray',
+                vmin=minv,
+                vmax=maxv
+            )
+        return
+
+    def visualize_filters(self, layer_name, **kwargs):
+        try:
+            # Gets the layer object from the model
+            layer = self.model
+            for name in layer_name.split('.'):
+                layer = getattr(layer, name)
+            # We are only looking at filters for 2D convolutions
+            if isinstance(layer, nn.Conv2d):
+                # Takes the weight information
+                weights = layer.weight.data.cpu().numpy()
+                # The weights have channels_out (filter), channels_in, H, W shape
+                n_filters, n_channels, _, _ = weights.shape
+
+                # Builds a figure
+                size = (2 * n_channels + 2, 2 * n_filters)
+                fig, axes = plt.subplots(n_filters, n_channels, figsize=size)
+                axes = np.atleast_2d(axes).reshape(n_filters, n_channels)
+                # For each channel_out (filter)
+                for i in range(n_filters):
+                    ModelTrainer._visualize_tensors(
+                        axes[i, :],
+                        weights[i],
+                        layer_name='Filter #{}'.format(i),
+                        title='Channel' if (i == 0) else None
+                    )
+
+                for ax in axes.flat:
+                    ax.label_outer()
+
+                fig.tight_layout()
+                return fig
+        except AttributeError:
+            return
+
+    def attach_hooks(self, layers_to_hook, hook_fn=None):
+        # Clear any previous values
+        self.visualization = {}
+        # Creates the dictionary to map layer objects to their names
+        modules = list(self.model.named_modules())
+        layer_names = {layer: name for name, layer in modules[1:]}
+
+        if hook_fn is None:
+            # Hook function to be attached to the forward pass
+            def hook_fn(layer, inputs, outputs):
+                # Gets the layer name
+                name = layer_names[layer]
+                # Detaches outputs
+                values = outputs.detach().cpu().numpy()
+                # Since the hook function may be called multiple times
+                # for example, if we make predictions for multiple mini-batches
+                # it concatenates the results
+                if self.visualization[name] is None:
+                    self.visualization[name] = values
+                else:
+                    self.visualization[name] = np.concatenate([self.visualization[name], values])
+
+        for name, layer in modules:
+            # If the layer is in our list
+            if name in layers_to_hook:
+                # Initializes the corresponding key in the dictionary
+                self.visualization[name] = None
+                # Register the forward hook and keep the handle in another dict
+                self.handles[name] = layer.register_forward_hook(hook_fn)
+
+    def remove_hooks(self):
+        # Loops through all hooks and removes them
+        for handle in self.handles.values():
+            handle.remove()
+        # Clear the dict, as all hooks have been removed
+        self.handles = {}
+
+    def visualize_outputs(self, layers, n_images=10, y=None, yhat=None):
+        layers = list(filter(lambda l: l in self.visualization.keys(), layers))
+        shapes = [self.visualization[layer].shape for layer in layers]
+        n_rows = [shape[1] if len(shape) == 4 else 1 for shape in shapes]
+        total_rows = np.sum(n_rows)
+
+        fig, axes = plt.subplots(total_rows, n_images, figsize=(1.5 * n_images, 1.5 * total_rows))
+        axes = np.atleast_2d(axes).reshape(total_rows, n_images)
+
+        # Loops through the layers, one layer per row of subplots
+        row = 0
+        for i, layer in enumerate(layers):
+            start_row = row
+            # Takes the produced feature maps for that layer
+            output = self.visualization[layer]
+
+            is_vector = len(output.shape) == 2
+
+            for j in range(n_rows[i]):
+                ModelTrainer._visualize_tensors(
+                    axes[row, :],
+                    output if is_vector else output[:, j].squeeze(),
+                    y,
+                    yhat,
+                    layer_name=layers[i] if is_vector else '{}\nfil#{}'.format(layers[i], row - start_row),
+                    title='Image' if (row == 0) else None
+                )
+                row += 1
+
+        for ax in axes.flat:
+            ax.label_outer()
+
+        plt.tight_layout()
+        return fig
+
+    def correct(self, x, y, threshold=.5):
+        self.model.eval()
+        yhat = self.model(x.to(self.device))
+        y = y.to(self.device)
+        self.model.train()
+
+        # We get the size of the batch and the number of classes
+        # (only 1, if it is binary)
+        n_samples, n_dims = yhat.shape
+        if n_dims > 1:
+            # In a multiclass classification, the biggest logit
+            # always wins, so we don't bother getting probabilities
+
+            # This is PyTorch's version of argmax,
+            # but it returns a tuple: (max value, index of max value)
+            _, predicted = torch.max(yhat, 1)
+        else:
+            n_dims += 1
+            # In binary classification, we NEED to check if the
+            # last layer is a sigmoid (and then it produces probs)
+            if isinstance(self.model, nn.Sequential) and \
+                    isinstance(self.model[-1], nn.Sigmoid):
+                predicted = (yhat > threshold).long()
+            # or something else (logits), which we need to convert
+            # using a sigmoid
+            else:
+                predicted = (torch.sigmoid(yhat) > threshold).long()
+
+        # How many samples got classified correctly for each class
+        result = []
+        for c in range(n_dims):
+            n_class = (y == c).sum().item()
+            n_correct = (predicted[y == c] == c).sum().item()
+            result.append((n_correct, n_class))
+        return torch.tensor(result)
+
+    @staticmethod
+    def loader_apply(loader, func, reduce='sum'):
+        results = [func(x, y) for i, (x, y) in enumerate(loader)]
+        results = torch.stack(results, axis=0)
+
+        if reduce == 'sum':
+            results = results.sum(axis=0)
+        elif reduce == 'mean':
+            results = results.float().mean(axis=0)
+
+        return results

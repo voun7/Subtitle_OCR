@@ -2,44 +2,67 @@
 Trains a PyTorch image classification model using device-agnostic code.
 """
 import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader
 
-from data import data_setup
-from utilities import engine, utils
-import model_builder
+from data.build_dataset import TextDetectionDataset, TextRecognitionDataset
+# from models.detection import DB
+from models.recognition import CRNN
+from utilities.engine import ModelTrainer
 
 
-def main() -> None:
+def train_text_detection(lang: str) -> None:
     # Setup hyperparameters
     num_epochs = 5
     batch_size = 32
     learning_rate = 0.001
-    num_classes = 1000  # Assuming text consists of 26 alphabet characters.
-    input_height = 100
-    input_width = 1900
-    hidden_size = 256
+    num_workers = 10
 
-    # Setup directories
-    data_dir = "training_data/chinese_data/trdg_synthetic_images"
+    training_data, val_data = TextDetectionDataset(lang, "train"), TextDetectionDataset(lang, "val")
 
-    # Setup target device
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    # train_dataloader = DataLoader(training_data, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    # val_dataloader = DataLoader(val_data, batch_size=batch_size, num_workers=num_workers)
+    #
+    # # Create model with help from model_builder.py
+    # model = DB()
+    # # Set loss function and optimizer
+    # loss_fn = nn.CrossEntropyLoss()
+    # # Set optimizer
+    # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    # # Start training with help from engine.py
+    # trainer = ModelTrainer(model, loss_fn, optimizer)
+    # trainer.set_loaders(train_dataloader, val_dataloader)
+    # trainer.train(num_epochs)
 
-    # Create DataLoaders with help from data_setup.py
-    train_dataloader, test_dataloader = data_setup.create_dataloaders(data_dir, batch_size)
+
+def train_text_recognition(lang: str) -> None:
+    # Setup hyperparameters
+    num_epochs = 5
+    batch_size = 32
+    learning_rate = 0.001
+    num_workers = 10
+
+    training_data, val_data = TextRecognitionDataset(lang, "train"), TextDetectionDataset(lang, "val")
+
+    train_dataloader = DataLoader(training_data, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    val_dataloader = DataLoader(val_data, batch_size=batch_size, num_workers=num_workers)
 
     # Create model with help from model_builder.py
-    model = model_builder.TextRecognitionModel(num_classes, input_height, input_width, hidden_size).to(device)
-
-    # Set loss and optimizer
-    loss_fn = torch.nn.CrossEntropyLoss()
+    model = CRNN()
+    # Set loss function and optimizer
+    loss_fn = nn.CrossEntropyLoss()
+    # Set optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-
     # Start training with help from engine.py
-    engine.train(model=model, train_dataloader=train_dataloader, test_dataloader=test_dataloader, loss_fn=loss_fn,
-                 optimizer=optimizer, epochs=num_epochs, device=device)
+    trainer = ModelTrainer(model, loss_fn, optimizer)
+    trainer.set_loaders(train_dataloader, val_dataloader)
+    trainer.train(num_epochs)
 
-    # Save the model with help from utils.py
-    utils.save_model(model=model, target_dir="models", model_name="text_rec_model.pth")
+
+def main() -> None:
+    lang = "en"
+    train_text_detection(lang)
+    # train_text_recognition()
 
 
 if __name__ == '__main__':
