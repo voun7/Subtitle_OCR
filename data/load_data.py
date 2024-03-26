@@ -14,14 +14,14 @@ DATASET_DIR = r"C:\Users\Victor\Documents\Python Datasets\Subtitle_OCR"
 
 
 class TRDGSyntheticData:
-    def __init__(self, lang: str, mode: str = "train") -> None:
+    def __init__(self, lang: str, data_type: str = "train") -> None:
         """
         Multilingual Dataset made using trdg package. (rec) (multi lang)
         Language depends on what data was generated.
         source: https://github.com/Belval/TextRecognitionDataGenerator
         """
         self.dataset_dir = f"{DATASET_DIR}/TRDG Synthetic Images/{lang}"
-        self.mode = mode
+        self.data_type = data_type
 
     def get_images(self) -> list:
         pass
@@ -36,14 +36,14 @@ class TRDGSyntheticData:
 
 
 class TextOCR01Data:
-    def __init__(self, mode: str = "train") -> None:
+    def __init__(self, data_type: str = "train") -> None:
         """
         TextOCR v0.1 Dataset (det) (en)
         source: https://textvqa.org/textocr/dataset/
         """
         self.dataset_dir = f"{DATASET_DIR}/TextOCR V0.1"
-        self.img_dir = Path(f"{self.dataset_dir}/{mode}")
-        self.labels_file = f"{self.dataset_dir}/TextOCR_0.1_{mode}.json"
+        self.img_dir = Path(f"{self.dataset_dir}/{data_type}")
+        self.labels_file = f"{self.dataset_dir}/TextOCR_0.1_{data_type}.json"
 
     def get_images(self, labels: dict) -> list:
         """
@@ -71,13 +71,13 @@ class TextOCR01Data:
 
 
 class SynthTextData:
-    def __init__(self, mode: str = "train") -> None:
+    def __init__(self, data_type: str = "train") -> None:
         """
         SynthText Dataset (det & rec) (en)
         source: https://github.com/ankush-me/SynthText
         """
         self.dataset_dir = f"{DATASET_DIR}/SynthText"
-        self.mode = mode
+        self.data_type = data_type
 
     def get_images(self) -> list:
         pass
@@ -92,13 +92,13 @@ class SynthTextData:
 
 
 class ICDAR2017RCTWData:
-    def __init__(self, mode: str = "train") -> None:
+    def __init__(self, data_type: str = "train") -> None:
         """
         ICDAR 2017 RCTW Dataset (det & rec) (en & ch)
         source: https://rctw.vlrlab.net/dataset
         """
         self.dataset_dir = f"{DATASET_DIR}/ICDAR2017 RCTW"
-        self.mode = mode
+        self.data_type = data_type
 
     def get_images(self) -> list:
         pass
@@ -113,13 +113,13 @@ class ICDAR2017RCTWData:
 
 
 class ICDAR2019LSVTData:
-    def __init__(self, mode: str = "train") -> None:
+    def __init__(self, data_type: str = "train") -> None:
         """
         ICDAR 2019 LSVT Dataset (det & rec) (en & ch)
         source: https://rrc.cvc.uab.es/?ch=16
         """
         self.dataset_dir = f"{DATASET_DIR}/ICDAR2019 LSVT"
-        self.mode = mode
+        self.data_type = data_type
 
     def get_images(self) -> list:
         pass
@@ -133,14 +133,35 @@ class ICDAR2019LSVTData:
         return images, labels
 
 
-class COCOTextV2Data:
-    def __init__(self, mode: str = "train") -> None:
+class COCOText2014Data:
+    def __init__(self, data_type: str = "train") -> None:
         """
         COCO-Text v2.0 2017 Dataset (det & rec) (en)
         source: https://bgshih.github.io/cocotext/
         """
         self.dataset_dir = f"{DATASET_DIR}/COCOText V2"
-        self.mode = mode
+        self.data_type = data_type
+
+    def get_images(self) -> list:
+        pass
+
+    def get_labels(self) -> dict:
+        pass
+
+    def load_data(self) -> tuple:
+        labels = self.get_labels()
+        images = self.get_images()
+        return images, labels
+
+
+class COCOText2017Data:
+    def __init__(self, data_type: str = "train") -> None:
+        """
+        COCO-Text v2.0 2017 Dataset (det & rec) (en)
+        source: https://bgshih.github.io/cocotext/
+        """
+        self.dataset_dir = f"{DATASET_DIR}/COCOText V2"
+        self.data_type = data_type
 
     def get_images(self) -> list:
         pass
@@ -155,13 +176,13 @@ class COCOTextV2Data:
 
 
 class ChStreetViewTxtRecData:
-    def __init__(self, mode: str = "train") -> None:
+    def __init__(self, data_type: str = "train") -> None:
         """
         Chinese Scene Text Recognition Dataset (rec) (ch)
         source: https://aistudio.baidu.com/competition/detail/8/0/related-material
         """
         self.dataset_dir = f"{DATASET_DIR}/Chinese Street View Text Recognition"
-        self.mode = mode
+        self.data_type = data_type
 
     def get_images(self) -> list:
         pass
@@ -185,29 +206,29 @@ def merge_data_sources(*args) -> tuple:
     return all_images, all_labels
 
 
-def load_data(lang: str, model_type: str, mode: str) -> tuple:
+def load_data(lang: str, model_type: str, data_type: str) -> tuple:
     if lang == "en":
         if model_type == "det":
-            ds1 = TextOCR01Data(mode)
-            # ds2 = SynthTextData(mode)
-            # ds3 = COCOTextV2Data(mode)
+            ds1 = TextOCR01Data(data_type)
+            # ds2 = SynthTextData(data_type)
+            # ds3 = COCOTextV2Data(data_type)
             return ds1.load_data()
             # return merge_data_sources(ds1, ds2, ds3)
         elif model_type == "rec":
-            ds1 = TRDGSyntheticData(lang, mode)
-            ds2 = SynthTextData(mode)
-            ds3 = COCOTextV2Data(mode)
+            ds1 = TRDGSyntheticData(lang, data_type)
+            ds2 = SynthTextData(data_type)
+            ds3 = COCOText2014Data(data_type)
             return merge_data_sources(ds1, ds2, ds3)
     elif lang == "ch":
         if model_type == "det":
-            ds1 = ICDAR2019LSVTData(mode)
-            ds2 = ICDAR2017RCTWData(mode)
+            ds1 = ICDAR2019LSVTData(data_type)
+            ds2 = ICDAR2017RCTWData(data_type)
             return merge_data_sources(ds1, ds2)
         elif model_type == "rec":
-            ds1 = ICDAR2019LSVTData(mode)
-            ds2 = ICDAR2017RCTWData(mode)
-            ds3 = ChStreetViewTxtRecData(mode)
-            ds4 = TRDGSyntheticData(lang, mode)
+            ds1 = ICDAR2019LSVTData(data_type)
+            ds2 = ICDAR2017RCTWData(data_type)
+            ds3 = ChStreetViewTxtRecData(data_type)
+            ds4 = TRDGSyntheticData(lang, data_type)
             return merge_data_sources(ds1, ds2, ds3, ds4)
 
 
