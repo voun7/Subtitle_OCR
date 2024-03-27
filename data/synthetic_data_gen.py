@@ -5,14 +5,14 @@ def generate_trdg_images() -> None:
     """
     Use trdg package to generate images with text for training model.
     """
-    dataset_dir = r"C:\Users\Victor\Documents\Python Datasets\Subtitle_OCR"
+    dataset_dir = r"C:\Users\Victor\Documents\Python Datasets\Subtitle_OCR\TRDG Synthetic Images"
     lang = "en"
     command = [
         "trdg",
-        "--output_dir", f"{dataset_dir}/{lang}/rec/synthetic images",  # The output directory.
+        "--output_dir", f"{dataset_dir}/{lang}/train_val_images",  # The output directory.
         "--language", lang,  # The language to use.
         "--count", "1000",  # The number of images to be created.
-        "--length", "18",  # Define how many words should be included in each generated sample.
+        "--length", "12",  # Define how many words should be included in each generated sample.
         "--random",  # Define if the produced string will have variable word count (with --length being the maximum).
         "--thread_count", "15",  # Define the number of thread to use for image generation.
         "--background", "3",  # Background to use. 0: Gaussian Noise, 1: Plain white, 2: Quasi crystal, 3: Image.
