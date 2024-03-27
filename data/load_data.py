@@ -234,13 +234,14 @@ def load_data(lang: str, model_type: str, data_type: str) -> tuple:
             ds1 = TextOCR01Data(data_type)
             ds2 = SynthTextData(data_type)
             ds3 = COCOText2014Data(data_type)
-            ds4 = COCOText2014Data(data_type)
+            ds4 = COCOText2017Data(data_type)
             return merge_data_sources(ds1, ds2, ds3, ds4)
         elif model_type == "rec":
             ds1 = TRDGSyntheticData(lang, data_type)
             ds2 = SynthTextData(data_type)
             ds3 = COCOText2014Data(data_type)
-            return merge_data_sources(ds1, ds2, ds3)
+            ds4 = COCOText2017Data(data_type)
+            return merge_data_sources(ds1, ds2, ds3, ds4)
     elif lang == "ch":
         if model_type == "det":
             ds1 = ICDAR2019LSVTData(data_type)
