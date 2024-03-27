@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import numpy as np
+
 DATASET_DIR = r"C:\Users\Victor\Documents\Python Datasets\Subtitle_OCR"
 
 
@@ -194,6 +196,25 @@ class ChStreetViewTxtRecData:
         labels = self.get_labels()
         images = self.get_images()
         return images, labels
+
+
+def data_random_split(files: object, split: float = 0.8, seed: int = 31) -> tuple[np.array, np.array]:
+    """
+    Randomly split any given files into two sets of non-overlapping training and validation files.
+    :param files: Index able object with length.
+    :param split: represent the proportion of the dataset to include in the test split
+    :param seed: Value used to set randomness of split. For reproducibility purposes.
+    """
+    files = np.array(files)
+    files_size = len(files)
+    train_size = int(split * files_size)
+
+    rng = np.random.default_rng(seed)
+    random_indexes = rng.permutation(files_size)
+
+    train_indexes, val_indexes = random_indexes[:train_size], random_indexes[train_size:]
+    train_files, val_files = files[train_indexes], files[val_indexes]
+    return train_files, val_files
 
 
 def merge_data_sources(*args) -> tuple:
