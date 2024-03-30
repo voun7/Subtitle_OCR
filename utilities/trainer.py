@@ -1,8 +1,8 @@
-import copy
-import datetime
 import logging
 import random
-import time
+from copy import deepcopy
+from datetime import timedelta, datetime
+from time import perf_counter
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -76,7 +76,7 @@ class ModelTrainer:
         """
         This method allows the user to define a SummaryWriter to interface with TensorBoard.
         """
-        suffix = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+        suffix = datetime.now().strftime('%Y%m%d%H%M%S')
         self.writer = SummaryWriter(f'{folder}/{name}_{suffix}')
 
     def _make_train_step_fn(self):
@@ -165,9 +165,9 @@ class ModelTrainer:
 
     def train(self, n_epochs: int, seed: int = 42) -> None:
         self.set_seed(seed)  # To ensure reproducibility of the training process
-        start_time = time.perf_counter()
+        start_time = perf_counter()
         # initialize the best loss to a large value
-        best_loss, best_model_wts = float('inf'), copy.deepcopy(self.model.state_dict())
+        best_loss, best_model_wts = float('inf'), deepcopy(self.model.state_dict())
 
         for epoch in range(n_epochs):
             # Keeps track of the numbers of epochs by updating the corresponding attribute
@@ -186,7 +186,7 @@ class ModelTrainer:
 
             # store best model
             if val_loss < best_loss:
-                best_loss, best_model_wts = val_loss, copy.deepcopy(self.model.state_dict())
+                best_loss, best_model_wts = val_loss, deepcopy(self.model.state_dict())
                 self.save_checkpoint()  # store weights into a local file
                 logger.info("Saving best model weights!")
 
@@ -209,8 +209,8 @@ class ModelTrainer:
             # Closes the writer
             self.writer.close()
 
-        stop_time = time.perf_counter()
-        total_time = datetime.timedelta(seconds=stop_time - start_time)
+        stop_time = perf_counter()
+        total_time = timedelta(seconds=stop_time - start_time)
         logger.info(f"Model Training Completed! Total Time: {total_time}")
 
     def save_checkpoint(self) -> None:
