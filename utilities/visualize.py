@@ -1,96 +1,33 @@
-import logging
-
+import cv2
 import matplotlib.pyplot as plt
-
-from data.build_dataset import LunaDataset
-from data.load_data import Ct
-
-logging.getLogger("PIL").setLevel(logging.WARNING)
-logging.getLogger("matplotlib").setLevel(logging.WARNING)
+from matplotlib.patches import Rectangle
 
 
-def find_positive_samples(luna_dataset, limit=100):
-    positive_sample_list = []
-    for sample_tup in luna_dataset.candidateInfo_list:
-        if sample_tup.isNodule_bool:
-            print(len(positive_sample_list), sample_tup)
-            positive_sample_list.append(sample_tup)
-        if len(positive_sample_list) >= limit:
-            break
-    return positive_sample_list
+def cv_draw_bboxes(image_path: str, bbox_path: str) -> None:
+    image = cv2.imread(image_path)  # Load the image
+    with open(bbox_path, 'r') as file:  # Read the text file containing bounding box coordinates
+        lines = file.readlines()
+
+    for line in lines:  # Iterate over the lines and draw bounding boxes
+        line = line.split()
+        x1, y1, x2, y2 = map(int, line)  # Change value type from string to int and parse values to variables.
+        cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Draw the bounding box on the image
+
+    # Display the image with bounding boxes
+    cv2.imshow('Image with Bounding Boxes', image)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 
-def show_candidate(series_uid, batch_ndx=None, **kwargs):
-    ds = LunaDataset(series_uid=series_uid, **kwargs)
-    clim = (-1000.0, 300)
-    pos_list = [i for i, x in enumerate(ds.candidateInfo_list) if x.isNodule_bool]
-
-    if batch_ndx is None:
-        if pos_list:
-            batch_ndx = pos_list[0]
-        else:
-            print("Warning: no positive samples found; using first negative sample.")
-            batch_ndx = 0
-
-    ct = Ct(series_uid)
-    ct_t, pos_t, series_uid, center_irc = ds[batch_ndx]
-    ct_a = ct_t[0].numpy()
-
-    fig = plt.figure(figsize=(10, 20))
-
-    group_list = [
-        [9, 11, 13],
-        [15, 16, 17],
-        [19, 21, 23],
-    ]
-    font_size = 10
-
-    subplot = fig.add_subplot(len(group_list) + 2, 3, 1)
-    subplot.set_title('index {}'.format(int(center_irc[0])), fontsize=font_size)
-    for label in (subplot.get_xticklabels() + subplot.get_yticklabels()):
-        label.set_fontsize(font_size)
-    plt.imshow(ct.hu_a[int(center_irc[0])], clim=clim, cmap='gray')
-
-    subplot = fig.add_subplot(len(group_list) + 2, 3, 2)
-    subplot.set_title('row {}'.format(int(center_irc[1])), fontsize=font_size)
-    for label in (subplot.get_xticklabels() + subplot.get_yticklabels()):
-        label.set_fontsize(font_size)
-    plt.imshow(ct.hu_a[:, int(center_irc[1])], clim=clim, cmap='gray')
-    plt.gca().invert_yaxis()
-
-    subplot = fig.add_subplot(len(group_list) + 2, 3, 3)
-    subplot.set_title('col {}'.format(int(center_irc[2])), fontsize=font_size)
-    for label in (subplot.get_xticklabels() + subplot.get_yticklabels()):
-        label.set_fontsize(font_size)
-    plt.imshow(ct.hu_a[:, :, int(center_irc[2])], clim=clim, cmap='gray')
-    plt.gca().invert_yaxis()
-
-    subplot = fig.add_subplot(len(group_list) + 2, 3, 4)
-    subplot.set_title('index {}'.format(int(center_irc[0])), fontsize=font_size)
-    for label in (subplot.get_xticklabels() + subplot.get_yticklabels()):
-        label.set_fontsize(font_size)
-    plt.imshow(ct_a[ct_a.shape[0] // 2], clim=clim, cmap='gray')
-
-    subplot = fig.add_subplot(len(group_list) + 2, 3, 5)
-    subplot.set_title('row {}'.format(int(center_irc[1])), fontsize=font_size)
-    for label in (subplot.get_xticklabels() + subplot.get_yticklabels()):
-        label.set_fontsize(font_size)
-    plt.imshow(ct_a[:, ct_a.shape[1] // 2], clim=clim, cmap='gray')
-    plt.gca().invert_yaxis()
-
-    subplot = fig.add_subplot(len(group_list) + 2, 3, 6)
-    subplot.set_title('col {}'.format(int(center_irc[2])), fontsize=font_size)
-    for label in (subplot.get_xticklabels() + subplot.get_yticklabels()):
-        label.set_fontsize(font_size)
-    plt.imshow(ct_a[:, :, ct_a.shape[2] // 2], clim=clim, cmap='gray')
-    plt.gca().invert_yaxis()
-
-    for row, index_list in enumerate(group_list):
-        for col, index in enumerate(index_list):
-            subplot = fig.add_subplot(len(group_list) + 2, 3, row * 3 + col + 7)
-            subplot.set_title('slice {}'.format(index), fontsize=font_size)
-            for label in (subplot.get_xticklabels() + subplot.get_yticklabels()):
-                label.set_fontsize(font_size)
-            plt.imshow(ct_a[index], clim=clim, cmap='gray')
+def plt_draw_bboxes(img, bbs=None, labels=None):
+    fig, ax = plt.subplots()
+    ax.imshow(img)
+    for bb, label in zip(bbs, labels):
+        bbox = Rectangle((bb[0], bb[1]), bb[2] - bb[0], bb[3] - bb[1], linewidth=1, edgecolor='r', facecolor='none')
+        ax.annotate(label, (bb[0], bb[1]), color='red', weight='bold', fontsize=10)
+        ax.add_patch(bbox)
     plt.show()
-    # print(series_uid, batch_ndx, bool(pos_t[0]), pos_list)
+
+
+def visualize_datasource():
+    pass
