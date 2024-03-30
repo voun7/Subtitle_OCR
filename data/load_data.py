@@ -1,8 +1,11 @@
 import json
 from pathlib import Path
+from time import perf_counter
 
 import numpy as np
 from scipy.io import loadmat
+
+from utilities.visualize import visualize_datasource
 
 DATASET_DIR = r"C:\Users\Victor\Documents\Python Datasets\Subtitle_OCR"
 
@@ -172,28 +175,22 @@ class SynthTextData:
         self.labels_file = self.dataset_dir / "gt.mat"
 
     def load_img_labels(self, img_files) -> dict:
-        # TODO: Make loading of labels faster.
         labels = loadmat(str(self.labels_file))
-        file_names = np.array([file_name[0] for file_name in labels["imnames"][0]])
+        all_labels = {}
+        for name, texts, bboxes in zip(labels["imnames"][0], labels["txt"][0], labels["wordBB"][0]):
+            name = name[0].split('/')[1]
+            all_labels[name] = (texts, bboxes)
+
         img_data = {}
         if self.model_type == "det":
-            img_bboxes = labels["wordBB"][0]
             for file in img_files:
-                boxes, ann_key = [], '/'.join(file.parts[-2:])
-                index = np.where(file_names == np.array(ann_key))[0][0]
-                for bbox in img_bboxes[index]:
-                    # TODO: Append correct bbox coordinates.
-                    # bbox = bbox[0][0], bbox[0][1], bbox[2][0], bbox[2][1]
-                    boxes.append(bbox)
-                img_data[file] = boxes
+                bboxes = all_labels[file.name][1]
+                new_boxes = []
+                for box in bboxes:  # Todo: Get correct bbox with top left and bottom right.
+                    new_boxes.append(box)
+                img_data[file] = new_boxes
         elif self.model_type == "rec":
-            img_text = labels["txt"][0]
-            for file in img_files:
-                texts, ann_key = [], '/'.join(file.parts[-2:])
-                index = np.where(file_names == ann_key)[0][0]
-                for text in img_text[index]:
-                    texts.append(text)
-                img_data[file] = texts
+            img_data = {file: all_labels[file.name][0] for file in img_files}
         return img_data
 
     def load_data(self) -> dict:
@@ -322,3 +319,18 @@ def load_data(lang: str, model_type: str, data_type: str) -> dict:
                 ICDAR2019LSVTWeakData(data_type),
                 TRDGSyntheticData(lang, data_type)
             )
+
+
+if __name__ == '__main__':
+    start = perf_counter()
+
+    tds = ICDAR2019LSVTFullData("det")
+    ts_data = tds.load_data()
+    ts_keys, ts_idx = list(ts_data.keys()), 0
+    ts_img_path, ts_img_labels = str(ts_keys[ts_idx]), ts_data[ts_keys[ts_idx]]
+    print(f"Data Source Length: {len(ts_keys):,}\nImage Path: {ts_img_path}\nImage Labels: {ts_img_labels}\n"
+          f"Data Load Time: {(perf_counter() - start):.4f}")
+    if type(ts_img_labels[0]) is str:  # Check 1st value. Labels that contain texts will be strings.
+        visualize_datasource(ts_img_path)
+    else:
+        visualize_datasource(ts_img_path, bboxes=ts_img_labels)
