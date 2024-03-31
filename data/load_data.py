@@ -12,7 +12,7 @@ DATASET_DIR = r"C:\Users\Victor\Documents\Python Datasets\Subtitle_OCR"
 
 # Text Detection Format Annotation
 # -Image file path--          --Image bboxes (top left & bottom right)--
-# {"train_images/img_1.jpg": [[310, 104, 416, 141], ..., [310, 104, 416, 141]]}
+# {"train_images/img_1.jpg": [(310, 104, 416, 141), ..., (310, 104, 416, 141)]}
 
 # Text Recognition Format Annotation
 # --Image file path--         --Image text--
@@ -20,7 +20,7 @@ DATASET_DIR = r"C:\Users\Victor\Documents\Python Datasets\Subtitle_OCR"
 
 
 class ChStreetViewTxtRecData:
-    def __init__(self, data_type: str = "train") -> None:
+    def __init__(self, data_type: str) -> None:
         """
         Chinese Scene Text Recognition Dataset (rec) (ch)
         source: https://aistudio.baidu.com/competition/detail/8/0/related-material
@@ -44,7 +44,7 @@ class ChStreetViewTxtRecData:
 
 
 class ICDAR2017RCTWData:
-    def __init__(self, model_type, data_type: str = "train") -> None:
+    def __init__(self, model_type: str, data_type: str) -> None:
         """
         ICDAR 2017 RCTW Dataset (det & rec) (en & ch)
         source: https://rctw.vlrlab.net/dataset
@@ -87,7 +87,7 @@ class ICDAR2017RCTWData:
 
 
 class ICDAR2019LSVTFullData:
-    def __init__(self, model_type, data_type: str = "train") -> None:
+    def __init__(self, model_type: str, data_type: str) -> None:
         """
         ICDAR 2019 LSVT Dataset (det & rec) (en & ch)
         source: https://rrc.cvc.uab.es/?ch=16
@@ -97,8 +97,8 @@ class ICDAR2019LSVTFullData:
         self.img_dir = self.dataset_dir / "train_full"
         self.labels_file = self.dataset_dir / "train_full_labels.json"
 
-    def load_img_labels(self, img_files) -> dict:
-        with open(self.labels_file, 'r') as file:
+    def load_img_labels(self, img_files: list) -> dict:
+        with open(self.labels_file) as file:
             labels = json.load(file)
         img_data = {}
         if self.model_type == "det":
@@ -130,7 +130,7 @@ class ICDAR2019LSVTFullData:
 
 
 class ICDAR2019LSVTWeakData:
-    def __init__(self, data_type: str = "train") -> None:
+    def __init__(self, data_type: str) -> None:
         """
         ICDAR 2019 LSVT Dataset (rec) (en & ch)
         source: https://rrc.cvc.uab.es/?ch=16
@@ -140,7 +140,7 @@ class ICDAR2019LSVTWeakData:
         self.img_dir = self.dataset_dir / "train_weak"
         self.labels_file = self.dataset_dir / "train_weak_labels.json"
 
-    def load_img_labels(self, img_files) -> dict:
+    def load_img_labels(self, img_files: list) -> dict:
         with open(self.labels_file, 'r') as file:
             labels = json.load(file)
         img_data = {}
@@ -164,7 +164,7 @@ class ICDAR2019LSVTWeakData:
 
 
 class SynthTextData:
-    def __init__(self, model_type, data_type: str = "train") -> None:
+    def __init__(self, model_type: str, data_type: str) -> None:
         """
         SynthText Dataset (det & rec) (en)
         source: https://github.com/ankush-me/SynthText
@@ -174,23 +174,23 @@ class SynthTextData:
         self.img_dir = self.dataset_dir / "images"
         self.labels_file = self.dataset_dir / "gt.mat"
 
-    def load_img_labels(self, img_files) -> dict:
+    def load_img_labels(self, img_files: list) -> dict:
         labels = loadmat(str(self.labels_file))
-        all_labels = {}
-        for name, texts, bboxes in zip(labels["imnames"][0], labels["txt"][0], labels["wordBB"][0]):
-            name = name[0].split('/')[1]
-            all_labels[name] = (texts, bboxes)
 
         img_data = {}
         if self.model_type == "det":
+            all_labels = {name[0].split('/')[1]: bbs for name, bbs in zip(labels["imnames"][0], labels["wordBB"][0])}
             for file in img_files:
-                bboxes = all_labels[file.name][1]
-                new_boxes = []
-                for box in bboxes:  # Todo: Get correct bbox with top left and bottom right.
-                    new_boxes.append(box)
-                img_data[file] = new_boxes
+                bboxes = all_labels[file.name]
+                if len(bboxes.shape) == 3:
+                    bboxes_t = np.transpose(bboxes)
+                    reshaped_bboxes = bboxes_t.reshape(bboxes.shape[-1], -1)
+                    img_data[file] = reshaped_bboxes[:, [0, 1, 4, 5]]
+                else:
+                    img_data[file] = [(bboxes[0][0], bboxes[1][0], bboxes[0][2], bboxes[1][2])]
         elif self.model_type == "rec":
-            img_data = {file: all_labels[file.name][0] for file in img_files}
+            all_labels = {name[0].split('/')[1]: texts for name, texts in zip(labels["imnames"][0], labels["txt"][0])}
+            img_data = {file: all_labels[file.name] for file in img_files}
         return img_data
 
     def load_data(self) -> dict:
@@ -205,37 +205,46 @@ class SynthTextData:
 
 
 class TextOCR01Data:
-    def __init__(self, data_type: str = "train") -> None:
+    def __init__(self, model_type: str, data_type: str) -> None:
         """
-        TextOCR v0.1 Dataset (det) (en)
+        TextOCR v0.1 Dataset (det & rec) (en)
         source: https://textvqa.org/textocr/dataset/
         """
+        self.model_type = model_type
         self.dataset_dir = Path(f"{DATASET_DIR}/TextOCR V0.1")
         self.img_dir = self.dataset_dir / "train_val_images"
         self.labels_file = self.dataset_dir / f"TextOCR_0.1_{data_type}.json"
 
     def load_labels(self) -> dict:
         with open(self.labels_file) as file:
-            labels = json.load(file)["anns"]
+            labels = json.load(file)["anns"].values()
 
         all_labels = {}
-        for val in labels.values():
-            img_id = val["id"].split('_')[0]
-            bbox = val["bbox"]
-            all_labels.setdefault(img_id, []).append(bbox)
+        if self.model_type == "det":
+            for val in labels:
+                text = val["utf8_string"]
+                if len(text) > 1:
+                    img_id = val["id"].split('_')[0]
+                    bbox = val["points"]
+                    bbox = bbox[0], bbox[1], bbox[4], bbox[5]
+                    all_labels.setdefault(img_id, []).append(bbox)
+        elif self.model_type == "rec":
+            for val in labels:
+                text = val["utf8_string"]
+                if len(text) > 1:
+                    img_id = val["id"].split('_')[0]
+                    all_labels.setdefault(img_id, []).append(text)
         return all_labels
 
     def load_data(self) -> dict:
         img_labels = self.load_labels()
-        label_keys, img_data = set(img_labels.keys()), {}
-        for img_file in self.img_dir.iterdir():
-            if img_file.stem in label_keys:
-                img_data[img_file] = img_labels[img_file.stem]
+        img_files = {file.stem: file for file in self.img_dir.iterdir()}
+        img_data = {img_files[key]: value for key, value in img_labels.items()}
         return img_data
 
 
 class TRDGSyntheticData:
-    def __init__(self, lang: str, data_type: str = "train") -> None:
+    def __init__(self, lang: str, data_type: str) -> None:
         """
         Multilingual Dataset made using trdg package. (rec) (multi lang)
         Language depends on what data was generated.
@@ -244,13 +253,16 @@ class TRDGSyntheticData:
         self.data_type = data_type
         self.dataset_dir = Path(f"{DATASET_DIR}/TRDG Synthetic Images/{lang}")
         self.img_dir = self.dataset_dir / "train_val_images"
-        self.labels_file = self.dataset_dir / f"train_val_labels.json"
+        self.labels_file = self.img_dir / f"labels.txt"
 
-    def load_img_labels(self, img_files) -> dict:
-        pass
+    def load_img_labels(self, img_files: list) -> dict:
+        labels = {text.split(maxsplit=1)[0]: text.split(maxsplit=1)[1] for text in
+                  self.labels_file.read_text("utf-8").splitlines()}
+        img_data = {img_file: labels[img_file.name] for img_file in img_files}
+        return img_data
 
     def load_data(self) -> dict:
-        img_files = list(self.img_dir.iterdir())
+        img_files = list(self.img_dir.glob("*.jpg"))
         train_data, val_data = data_random_split(img_files)
         if self.data_type == "train":
             img_data = self.load_img_labels(train_data)
@@ -298,11 +310,12 @@ def load_data(lang: str, model_type: str, data_type: str) -> dict:
         if model_type == "det":
             return merge_data_sources(
                 SynthTextData(model_type, data_type),
-                TextOCR01Data(data_type)
+                TextOCR01Data(model_type, data_type)
             )
         elif model_type == "rec":
             return merge_data_sources(
                 SynthTextData(model_type, data_type),
+                TextOCR01Data(model_type, data_type),
                 TRDGSyntheticData(lang, data_type)
             )
     elif lang == "ch":
@@ -324,13 +337,13 @@ def load_data(lang: str, model_type: str, data_type: str) -> dict:
 if __name__ == '__main__':
     start = perf_counter()
 
-    tds = ICDAR2019LSVTFullData("det")
+    tds = TRDGSyntheticData("en", "train")
     ts_data = tds.load_data()
     ts_keys, ts_idx = list(ts_data.keys()), 0
     ts_img_path, ts_img_labels = str(ts_keys[ts_idx]), ts_data[ts_keys[ts_idx]]
     print(f"Data Source Length: {len(ts_keys):,}\nImage Path: {ts_img_path}\nImage Labels: {ts_img_labels}\n"
           f"Data Load Time: {(perf_counter() - start):.4f}")
-    if type(ts_img_labels[0]) is str:  # Check 1st value. Labels that contain texts will be strings.
+    if "str" in str(type(ts_img_labels[0])):  # Check 1st value. Labels that contain texts will be strings.
         visualize_datasource(ts_img_path)
     else:
         visualize_datasource(ts_img_path, bboxes=ts_img_labels)

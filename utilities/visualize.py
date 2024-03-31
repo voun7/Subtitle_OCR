@@ -1,16 +1,4 @@
 import cv2 as cv
-import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
-
-
-def plt_draw_bboxes(img, bbs=None, labels=None) -> None:
-    fig, ax = plt.subplots()
-    ax.imshow(img)
-    for bb, label in zip(bbs, labels):
-        bbox = Rectangle((bb[0], bb[1]), bb[2] - bb[0], bb[3] - bb[1], linewidth=1, edgecolor='r', facecolor='none')
-        ax.annotate(label, (bb[0], bb[1]), color='red', weight='bold', fontsize=10)
-        ax.add_patch(bbox)
-    plt.show()
 
 
 def rescale(scale: float, frame=None, bbox: tuple = None):
@@ -45,12 +33,12 @@ def visualize_datasource(image_path: str, bboxes: list = None) -> None:
     if scale and bboxes:
         bboxes = [rescale(scale, bbox=bbox) for bbox in bboxes]
 
-    if bboxes:
+    if bboxes is not None:
         for box in bboxes:  # Iterate over the lines and draw bounding boxes
             x1, y1, x2, y2 = map(int, box)  # Change value type from string to int and parse values to variables.
             cv.rectangle(img_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Draw the bounding box on the image
 
     # Display the image with bounding boxes
     cv.imshow(f"Image Rescale Value: {round(scale, 6) if scale else scale}", img_frame)
-    cv.waitKey(0)
+    cv.waitKey()
     cv.destroyAllWindows()

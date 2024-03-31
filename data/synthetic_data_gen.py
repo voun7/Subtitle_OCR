@@ -4,6 +4,7 @@ import subprocess
 def generate_trdg_images() -> None:
     """
     Use trdg package to generate images with text for training model.
+    To fix getsize error use: pip install Pillow==9.5.0
     """
     dataset_dir = r"C:\Users\Victor\Documents\Python Datasets\Subtitle_OCR\TRDG Synthetic Images"
     lang = "en"
