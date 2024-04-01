@@ -1,6 +1,3 @@
-"""
-Trains a PyTorch image classification model using device-agnostic code.
-"""
 import logging
 
 import torch
@@ -36,9 +33,10 @@ def train_text_detection(lang: str) -> None:
         v2.ToDtype(torch.float32, scale=True),
         v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
-
+    logger.info("Loading Text Detection Data...")
     train_ds = TextDetectionDataset(lang, "train", train_transformer)
     val_ds = TextDetectionDataset(lang, "val", val_transformer)
+    logger.info("Loading Completed...")
 
     model_params = {
         "input_shape": (3, 96, 96),
@@ -81,9 +79,10 @@ def train_text_recognition(lang: str) -> None:
         v2.ToDtype(torch.float32, scale=True),
         v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
-
+    logger.info("Loading Text Recognition Data...")
     train_ds = TextRecognitionDataset(lang, "train", train_transformer)
     val_ds = TextRecognitionDataset(lang, "val", val_transformer)
+    logger.info("Loading Completed...")
 
     model_params = {
         "input_shape": (3, 96, 96),
