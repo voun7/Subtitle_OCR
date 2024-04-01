@@ -20,25 +20,22 @@ logger = logging.getLogger(__name__)
 
 def train_text_detection(lang: str) -> None:
     # Setup hyperparameters
-    num_epochs = 100
-    batch_size = 32
-    val_batch_size = 64
-    learning_rate = 0.001
-    num_workers = 10
+    # num_epochs = 100
+    # batch_size = 32
+    # val_batch_size = 64
+    # learning_rate = 0.001
+    # num_workers = 10
 
     train_transformer = v2.Compose([
+        v2.RandomResizedCrop(size=(224, 224), antialias=True),
         v2.RandomHorizontalFlip(p=0.5),
-        v2.RandomVerticalFlip(p=0.5),
-        v2.RandomRotation(45),
-        v2.RandomResizedCrop(96, scale=(0.8, 1.0), ratio=(1.0, 1.0)),
-        v2.Normalize(
-            mean=[0.485, 0.456, 0.406],
-            std=[0.229, 0.224, 0.225]
-        ),
-        v2.ToImage(),
-        v2.ToDtype(torch.float32, scale=True)
+        v2.ToDtype(torch.float32, scale=True),
+        v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
-    val_transformer = v2.Compose([v2.ToImage(), v2.ToDtype(torch.float32, scale=True)])
+    val_transformer = v2.Compose([
+        v2.ToDtype(torch.float32, scale=True),
+        v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
 
     train_ds = TextDetectionDataset(lang, "train", train_transformer)
     val_ds = TextDetectionDataset(lang, "val", val_transformer)
@@ -51,19 +48,19 @@ def train_text_detection(lang: str) -> None:
         "num_classes": 2,
     }
     model = DB(model_params)
-    loss_fn = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    lr_scheduler = ReduceLROnPlateau(optimizer)
-    train_params = {
-        "loss_fn": loss_fn,
-        "optimizer": optimizer,
-        "sanity_check": True,
-        "lr_scheduler": lr_scheduler,
-        "model_file": "./saved models/detection_model.pt",
-    }
-    trainer = ModelTrainer(model, train_params)
-    trainer.set_loaders(train_ds, val_ds, batch_size, val_batch_size, num_workers)
-    trainer.train(num_epochs)
+    # loss_fn = nn.CrossEntropyLoss()
+    # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    # lr_scheduler = ReduceLROnPlateau(optimizer)
+    # train_params = {
+    #     "loss_fn": loss_fn,
+    #     "optimizer": optimizer,
+    #     "sanity_check": True,
+    #     "lr_scheduler": lr_scheduler,
+    #     "model_file": "./saved models/detection_model.pt",
+    # }
+    # trainer = ModelTrainer(model, train_params)
+    # trainer.set_loaders(train_ds, val_ds, batch_size, val_batch_size, num_workers)
+    # trainer.train(num_epochs)
 
 
 def train_text_recognition(lang: str) -> None:
@@ -75,18 +72,15 @@ def train_text_recognition(lang: str) -> None:
     num_workers = 10
 
     train_transformer = v2.Compose([
+        v2.RandomResizedCrop(size=(224, 224), antialias=True),
         v2.RandomHorizontalFlip(p=0.5),
-        v2.RandomVerticalFlip(p=0.5),
-        v2.RandomRotation(45),
-        v2.RandomResizedCrop(96, scale=(0.8, 1.0), ratio=(1.0, 1.0)),
-        v2.Normalize(
-            mean=[0.485, 0.456, 0.406],
-            std=[0.229, 0.224, 0.225]
-        ),
-        v2.ToImage(),
-        v2.ToDtype(torch.float32, scale=True)
+        v2.ToDtype(torch.float32, scale=True),
+        v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
-    val_transformer = v2.Compose([v2.ToImage(), v2.ToDtype(torch.float32, scale=True)])
+    val_transformer = v2.Compose([
+        v2.ToDtype(torch.float32, scale=True),
+        v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
 
     train_ds = TextRecognitionDataset(lang, "train", train_transformer)
     val_ds = TextRecognitionDataset(lang, "val", val_transformer)
@@ -116,11 +110,23 @@ def train_text_recognition(lang: str) -> None:
 
 def main() -> None:
     lang = "en"
-    tb = TelegramBot()
-    train_text_detection(lang)
-    tb.send_telegram_message("Text Detection Model Training Done!")
-    train_text_recognition(lang)
-    tb.send_telegram_message("Text Recognition Model Training Done!")
+    # tb = TelegramBot()
+
+    try:
+        train_text_detection(lang)
+        # tb.send_telegram_message("Text Detection Model Training Done!")
+    except Exception as error:
+        error_msg = f"During Text Detection training an error occurred:\n{error}"
+        logger.exception(error_msg)
+        # tb.send_telegram_message(error_msg)
+
+    # try:
+    #     train_text_recognition(lang)
+    #     tb.send_telegram_message("Text Recognition Model Training Done!")
+    # except Exception as error:
+    #     error_msg = f"During Text Recognition training an error occurred:\n{error}"
+    #     logger.exception(error_msg)
+    #     tb.send_telegram_message(error_msg)
 
 
 if __name__ == '__main__':

@@ -11,7 +11,8 @@ class TelegramBot:
 
     def __init__(self) -> None:
         if self.credential_file:
-            auth_json = json.loads(self.credential_file.read_text())
+            with open(self.credential_file) as file:
+                auth_json = json.load(file)
             self.bot_token = auth_json["token"]
             self.chat_id = auth_json["chat_id"]
 

@@ -4,7 +4,6 @@ from copy import deepcopy
 from datetime import timedelta, datetime
 from time import perf_counter
 
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
@@ -251,17 +250,6 @@ class ModelTrainer:
         self.model.train()
         # Detaches it, brings it to CPU and back to Numpy
         return output_tensor.detach().cpu().numpy()
-
-    def plot_losses(self):
-        fig = plt.figure(figsize=(10, 4))
-        plt.plot(self.losses, label='Training Loss', c='b')
-        plt.plot(self.val_losses, label='Validation Loss', c='r')
-        plt.yscale('log')
-        plt.xlabel('Epochs')
-        plt.ylabel('Loss')
-        plt.legend()
-        plt.tight_layout()
-        return fig
 
     def add_graph(self):
         # Fetches a single mini-batch, so we can use add_graph

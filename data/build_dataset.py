@@ -6,33 +6,33 @@ from data.load_data import load_data
 
 class TextDetectionDataset(Dataset):
     def __init__(self, lang: str, data_type: str, transform=None) -> None:
-        self.img_paths, self.img_targets = load_data(lang, "det", data_type)
+        self.img_data = load_data(lang, "det", data_type)
+        self.img_data_keys = list(self.img_data.keys())
         self.transform = transform
 
     def __len__(self):
-        return len(self.img_paths)
+        return len(self.img_data)
 
     def __getitem__(self, idx):
-        img_path = self.img_paths[idx]
-        image = read_image(img_path)
-        target = self.img_targets[idx]
+        img_path, img_bboxes = self.img_data_keys[idx], self.img_data[self.img_data_keys[idx]]
+        image = read_image(str(img_path))
         if self.transform:
             image = self.transform(image)
-        return image, target
+        return image, img_bboxes
 
 
 class TextRecognitionDataset(Dataset):
     def __init__(self, lang: str, data_type: str, transform=None) -> None:
-        self.img_paths, self.img_labels = load_data(lang, "rec", data_type)
+        self.img_data = load_data(lang, "rec", data_type)
+        self.img_data_keys = list(self.img_data.keys())
         self.transform = transform
 
     def __len__(self):
-        return len(self.img_paths)
+        return len(self.img_data)
 
     def __getitem__(self, idx):
-        img_path = self.img_paths[idx]
-        image = read_image(img_path)
-        label = self.img_labels[idx]
+        img_path, img_texts = self.img_data_keys[idx], self.img_data[self.img_data_keys[idx]]
+        image = read_image(str(img_path))
         if self.transform:
             image = self.transform(image)
-        return image, label
+        return image, img_texts

@@ -8,7 +8,12 @@ import torch.nn as nn
 
 
 class DB(nn.Module):
-    pass
+    def __init__(self, params):
+        super(DB, self).__init__()
+        pass
+
+    def forward(self, x):
+        pass
 
 
 def find_conv2d_out_shape(h_in, w_in, conv, pool=2):
