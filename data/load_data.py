@@ -251,8 +251,8 @@ class TRDGSyntheticData:
         source: https://github.com/Belval/TextRecognitionDataGenerator
         """
         self.data_type = data_type
-        self.dataset_dir = Path(f"{DATASET_DIR}/TRDG Synthetic Images/{lang}")
-        self.img_dir = self.dataset_dir / "train_val_images"
+        self.dataset_dir = Path(f"{DATASET_DIR}/TRDG Synthetic Images")
+        self.img_dir = self.dataset_dir / lang
         self.labels_file = self.img_dir / f"labels.txt"
 
     def load_img_labels(self, img_files: list) -> dict:
