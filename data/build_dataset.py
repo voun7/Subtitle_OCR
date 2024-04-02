@@ -2,11 +2,12 @@ from torch.utils.data import Dataset
 from torchvision.io import read_image
 
 from data.load_data import load_data
+from utilities.utils import Types
 
 
 class TextDetectionDataset(Dataset):
-    def __init__(self, lang: str, data_type: str, transform=None) -> None:
-        self.img_data = load_data(lang, "det", data_type)
+    def __init__(self, lang: Types.Language, data_type: Types.DataType, transform=None) -> None:
+        self.img_data = load_data(lang, Types.det, data_type)
         self.img_data_keys = list(self.img_data.keys())
         self.transform = transform
 
@@ -22,8 +23,8 @@ class TextDetectionDataset(Dataset):
 
 
 class TextRecognitionDataset(Dataset):
-    def __init__(self, lang: str, data_type: str, transform=None) -> None:
-        self.img_data = load_data(lang, "rec", data_type)
+    def __init__(self, lang: Types.Language, data_type: Types.DataType, transform=None) -> None:
+        self.img_data = load_data(lang, Types.rec, data_type)
         self.img_data_keys = list(self.img_data.keys())
         self.transform = transform
 

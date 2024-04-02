@@ -11,11 +11,12 @@ from models.recognition import CRNN
 from utilities.logger_setup import setup_logging
 from utilities.telegram_bot import TelegramBot
 from utilities.trainer import ModelTrainer
+from utilities.utils import Types
 
 logger = logging.getLogger(__name__)
 
 
-def train_text_detection(lang: str) -> None:
+def train_text_detection(lang: Types.Language) -> None:
     # Setup hyperparameters
     # num_epochs = 100
     # batch_size = 32
@@ -34,8 +35,8 @@ def train_text_detection(lang: str) -> None:
         v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
     logger.info("Loading Text Detection Data...")
-    train_ds = TextDetectionDataset(lang, "train", train_transformer)
-    val_ds = TextDetectionDataset(lang, "val", val_transformer)
+    train_ds = TextDetectionDataset(lang, Types.train, train_transformer)
+    val_ds = TextDetectionDataset(lang, Types.val, val_transformer)
     logger.info("Loading Completed...")
 
     model_params = {
@@ -61,7 +62,7 @@ def train_text_detection(lang: str) -> None:
     # trainer.train(num_epochs)
 
 
-def train_text_recognition(lang: str) -> None:
+def train_text_recognition(lang: Types.Language) -> None:
     # Setup hyperparameters
     num_epochs = 100
     batch_size = 32
@@ -80,8 +81,8 @@ def train_text_recognition(lang: str) -> None:
         v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
     logger.info("Loading Text Recognition Data...")
-    train_ds = TextRecognitionDataset(lang, "train", train_transformer)
-    val_ds = TextRecognitionDataset(lang, "val", val_transformer)
+    train_ds = TextRecognitionDataset(lang, Types.train, train_transformer)
+    val_ds = TextRecognitionDataset(lang, Types.val, val_transformer)
     logger.info("Loading Completed...")
 
     model_params = {
@@ -108,7 +109,7 @@ def train_text_recognition(lang: str) -> None:
 
 
 def main() -> None:
-    lang = "en"
+    lang = Types.english
     # tb = TelegramBot()
 
     try:

@@ -25,7 +25,7 @@ def get_scale_factor(img_frame, img_target_height: int = 700):
         return rescale_factor
 
 
-def visualize_datasource(image_path: str, bboxes: list = None) -> None:
+def visualize_datasource(image_path: str, bboxes: list[list | tuple] = None) -> None:
     img_frame = cv.imread(image_path)  # Load the image
 
     if scale := get_scale_factor(img_frame):
