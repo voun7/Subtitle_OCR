@@ -1,7 +1,13 @@
 """
 Preferred detection models
-1.DB
-2.
+-----------------------------------------------
+(Segmentation-based Text Detection)
+1.DB algorithm (Differentiable Binarization)
+2. DB++ algorithm
+-----------------------------------------------
+(Regression-based Text Detection)
+1. TextBoxes algorithm
+2. CTPN (Connectionist Text Proposal Network)
 """
 import numpy as np
 import torch.nn as nn
