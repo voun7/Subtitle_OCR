@@ -6,18 +6,18 @@ import numpy as np
 from scipy.io import loadmat
 
 from utilities.utils import Types
-from utilities.visualize import visualize_datasource
+from utilities.visualize import visualize_data
 
 DATASET_DIR = r"C:\Users\Victor\Documents\Python Datasets\Subtitle_OCR"
 
 
 # Text Detection Format Annotation
-# -Image file path--          --Image bboxes (top left & bottom right)--
-# {"train_images/img_1.jpg": [(310, 104, 416, 141), ..., (310, 104, 416, 141)]}
+# -Image file path--          --Image bboxes (x_min, y_min, x_max, y_max) or (top left & bottom right)--
+# {"train_images/img_1.jpg": [(310.4525, 104.64254, 416.34455, 141.74236), ..., (310.2646, 104.5636, 416.6, 141.34635)]}
 
 # Text Recognition Format Annotation
 # --Image file path--         --Image text--
-# {"train_images/img_1.jpg": ["Sample Text" ..., "Sample Text2"]}
+# {"train_images/img_1.jpg": ["Sample Text", ..., "Sample Text2"]}
 
 
 class ChStreetViewTxtRecData:
@@ -174,25 +174,36 @@ class SynthTextData:
         self.dataset_dir = Path(f"{DATASET_DIR}/SynthText")
         self.img_dir = self.dataset_dir / "images"
         self.labels_file = self.dataset_dir / "gt.mat"
+        self.labels_json_file = self.dataset_dir / "gt.json"
+
+    def convert_mat_to_json(self) -> None:
+        labels = loadmat(str(self.labels_file))
+        all_labels = {}
+        for name, texts, bboxes in zip(labels["imnames"][0], labels["txt"][0], labels["wordBB"][0]):
+            name = name[0].split('/')[1]
+            if len(bboxes.shape) == 3:
+                bboxes_t = np.transpose(bboxes)
+                reshaped_bboxes = bboxes_t.reshape(bboxes.shape[-1], -1)
+                bboxes = reshaped_bboxes[:, [0, 1, 4, 5]]
+                bboxes = bboxes.tolist()
+            else:
+                bboxes = bboxes.tolist()
+                bboxes = [(bboxes[0][0], bboxes[1][0], bboxes[0][2], bboxes[1][2])]
+            all_labels[name] = texts.tolist(), bboxes
+        with open(self.labels_json_file, "w") as outfile:
+            json.dump(all_labels, outfile)
 
     def load_img_labels(self, img_files: list) -> dict:
-        labels = loadmat(str(self.labels_file))
+        if not self.labels_json_file.exists():
+            self.convert_mat_to_json()
 
-        img_data = {}
+        with open(self.labels_json_file) as file:
+            labels = json.load(file)
+
         if self.model_type == Types.det:
-            all_labels = {name[0].split('/')[1]: bbs for name, bbs in zip(labels["imnames"][0], labels["wordBB"][0])}
-            for file in img_files:
-                bboxes = all_labels[file.name]
-                if len(bboxes.shape) == 3:
-                    bboxes_t = np.transpose(bboxes)
-                    reshaped_bboxes = bboxes_t.reshape(bboxes.shape[-1], -1)
-                    img_data[file] = reshaped_bboxes[:, [0, 1, 4, 5]]
-                else:
-                    img_data[file] = [(bboxes[0][0], bboxes[1][0], bboxes[0][2], bboxes[1][2])]
+            return {file: labels[file.name][1] for file in img_files}
         elif self.model_type == Types.rec:
-            all_labels = {name[0].split('/')[1]: texts for name, texts in zip(labels["imnames"][0], labels["txt"][0])}
-            img_data = {file: all_labels[file.name] for file in img_files}
-        return img_data
+            return {file: labels[file.name][0] for file in img_files}
 
     def load_data(self) -> dict:
         img_files = list(self.img_dir.glob("*/*"))
@@ -338,13 +349,12 @@ def load_data(lang: Types.Language, model_type: Types.ModelType, data_type: Type
 if __name__ == '__main__':
     start = perf_counter()
 
-    tds = TRDGSyntheticData(Types.english, Types.train)
-    ts_data = tds.load_data()
+    ts_data = load_data(Types.english, Types.det, Types.train)
     ts_keys, ts_idx = list(ts_data.keys()), 0
     ts_img_path, ts_img_labels = str(ts_keys[ts_idx]), ts_data[ts_keys[ts_idx]]
     print(f"Data Source Length: {len(ts_keys):,}\nImage Path: {ts_img_path}\nImage Labels: {ts_img_labels}\n"
-          f"Data Load Time: {(perf_counter() - start):.4f}")
+          f"Data Load Time: {perf_counter() - start:.4f}")
     if "str" in str(type(ts_img_labels[0])):  # Check 1st value. Labels that contain texts will be strings.
-        visualize_datasource(ts_img_path)
+        visualize_data(ts_img_path)
     else:
-        visualize_datasource(ts_img_path, bboxes=ts_img_labels)
+        visualize_data(ts_img_path, bboxes=ts_img_labels)
