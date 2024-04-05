@@ -13,6 +13,8 @@ from utilities.telegram_bot import TelegramBot
 from utilities.trainer import ModelTrainer
 from utilities.utils import Types
 
+# from utilities.visualize import visualize_data
+
 logger = logging.getLogger(__name__)
 
 
@@ -25,15 +27,21 @@ def train_text_detection(lang: Types.Language) -> None:
     # learning_rate = 0.001
     # num_workers = 10
 
+    mean, std = [0.485, 0.456, 0.406], [0.229, 0.224, 0.225]
     train_transformer = v2.Compose([
+        v2.RandomRotation((-10, 10)),
+        v2.RandomZoomOut(),
+        v2.RandomHorizontalFlip(p=0.5),
+        v2.RandomPerspective(),
         v2.Resize(size=(height, width)),
+        v2.SanitizeBoundingBoxes(labels_getter=None),
         v2.ToDtype(torch.float32, scale=True),
-        v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        v2.Normalize(mean, std),
     ])
     val_transformer = v2.Compose([
         v2.Resize(size=(height, width)),
         v2.ToDtype(torch.float32, scale=True),
-        v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        v2.Normalize(mean, std)
     ])
     logger.info("Loading Text Detection Data...")
     train_ds = TextDetectionDataset(lang, Types.train, train_transformer)
