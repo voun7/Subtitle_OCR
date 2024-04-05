@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 def train_text_detection(lang: Types.Language) -> None:
     # Setup hyperparameters
+    height = width = 640
     # num_epochs = 100
     # batch_size = 32
     # val_batch_size = 64
@@ -25,12 +26,12 @@ def train_text_detection(lang: Types.Language) -> None:
     # num_workers = 10
 
     train_transformer = v2.Compose([
-        v2.RandomResizedCrop(size=(224, 224), antialias=True),
-        v2.RandomHorizontalFlip(p=0.5),
+        v2.Resize(size=(height, width)),
         v2.ToDtype(torch.float32, scale=True),
         v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
     val_transformer = v2.Compose([
+        v2.Resize(size=(height, width)),
         v2.ToDtype(torch.float32, scale=True),
         v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
@@ -40,7 +41,7 @@ def train_text_detection(lang: Types.Language) -> None:
     logger.info("Loading Completed...")
 
     model_params = {
-        "input_shape": (3, 96, 96),
+        "input_shape": (3, height, width),
         "initial_filters": 8,
         "num_fc1": 100,
         "dropout_rate": 0.25,
@@ -64,6 +65,7 @@ def train_text_detection(lang: Types.Language) -> None:
 
 def train_text_recognition(lang: Types.Language) -> None:
     # Setup hyperparameters
+    height, width = 224, 224
     num_epochs = 100
     batch_size = 32
     val_batch_size = 64
@@ -71,12 +73,12 @@ def train_text_recognition(lang: Types.Language) -> None:
     num_workers = 10
 
     train_transformer = v2.Compose([
-        v2.RandomResizedCrop(size=(224, 224), antialias=True),
-        v2.RandomHorizontalFlip(p=0.5),
+        v2.Resize(size=(height, width)),
         v2.ToDtype(torch.float32, scale=True),
         v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
     val_transformer = v2.Compose([
+        v2.Resize(size=(height, width)),
         v2.ToDtype(torch.float32, scale=True),
         v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
@@ -86,7 +88,7 @@ def train_text_recognition(lang: Types.Language) -> None:
     logger.info("Loading Completed...")
 
     model_params = {
-        "input_shape": (3, 96, 96),
+        "input_shape": (3, height, width),
         "initial_filters": 8,
         "num_fc1": 100,
         "dropout_rate": 0.25,
