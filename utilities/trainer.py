@@ -52,24 +52,25 @@ class ModelTrainer:
             model = model.to(self.device)
         return model
 
-    def init_train_dl(self, train_ds, batch_size: int, num_workers: int) -> DataLoader:
+    def init_dataloader(self, dataset, batch_size: int, num_workers: int) -> DataLoader:
         if self.use_cuda:
             batch_size *= torch.cuda.device_count()
-        train_dl = DataLoader(train_ds, batch_size, num_workers=num_workers, pin_memory=self.use_cuda)
-        return train_dl
-
-    def init_val_dl(self, val_ds, batch_size: int, num_workers: int) -> DataLoader:
-        if self.use_cuda:
-            batch_size *= torch.cuda.device_count()
-        val_dl = DataLoader(val_ds, batch_size, num_workers=num_workers, pin_memory=self.use_cuda)
-        return val_dl
+        data_loader = DataLoader(
+            dataset,
+            batch_size,
+            True,
+            num_workers=num_workers,
+            collate_fn=dataset.collate_fn,
+            pin_memory=self.use_cuda
+        )
+        return data_loader
 
     def set_loaders(self, train_ds, val_ds, batch_size: int, val_batch_size: int, num_workers: int) -> None:
         """
         This method allows the user to define which train_loader and val_loader to use.
         """
-        self.train_loader = self.init_train_dl(train_ds, batch_size, num_workers)
-        self.val_loader = self.init_val_dl(val_ds, val_batch_size, num_workers)
+        self.train_loader = self.init_dataloader(train_ds, batch_size, num_workers)
+        self.val_loader = self.init_dataloader(val_ds, val_batch_size, num_workers)
 
     def set_tensorboard(self, name: str, folder: str = 'runs') -> None:
         """
