@@ -1,8 +1,3 @@
-"""
-Preferred Recognition Models
------------------------------------------------
-1. CRNN
-"""
 import torch.nn as nn
 
 

@@ -6,8 +6,8 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision.transforms import v2
 
 from data.build_dataset import TextDetectionDataset, TextRecognitionDataset
-from models.detection import DB
-from models.recognition import CRNN
+from models.detection.det_db import DB
+from models.recognition.rec_crnn import CRNN
 from utilities.logger_setup import setup_logging
 from utilities.telegram_bot import TelegramBot
 from utilities.trainer import ModelTrainer
