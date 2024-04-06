@@ -30,9 +30,9 @@ def train_text_detection(lang: Types.Language) -> None:
     mean, std = [0.485, 0.456, 0.406], [0.229, 0.224, 0.225]
     train_transformer = v2.Compose([
         v2.RandomRotation((-10, 10)),
-        v2.RandomZoomOut(),
+        v2.RandomZoomOut(side_range=(1.0, 1.5)),
         v2.RandomHorizontalFlip(p=0.5),
-        v2.RandomPerspective(),
+        v2.RandomPerspective(0.3),
         v2.Resize(size=(height, width)),
         v2.SanitizeBoundingBoxes(labels_getter=None),
         v2.ToDtype(torch.float32, scale=True),
