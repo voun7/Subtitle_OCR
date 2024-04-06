@@ -354,7 +354,7 @@ if __name__ == '__main__':
     ts_img_path, ts_img_labels = str(ts_keys[ts_idx]), ts_data[ts_keys[ts_idx]]
     print(f"Data Source Length: {len(ts_keys):,}\nImage Path: {ts_img_path}\nImage Labels: {ts_img_labels}\n"
           f"Data Load Time: {perf_counter() - start:.4f}")
-    if "str" in str(type(ts_img_labels[0])):  # Check 1st value. Labels that contain texts will be strings.
+    if isinstance(ts_img_labels[0], str):  # Check 1st value. Labels that contain texts will be strings.
         visualize_data(ts_img_path)
     else:
         visualize_data(ts_img_path, bboxes=ts_img_labels)

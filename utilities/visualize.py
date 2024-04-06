@@ -27,7 +27,7 @@ def get_scale_factor(img_frame, img_target_height: int = 700) -> float:
 
 
 def visualize_data(image, bboxes: list[list | tuple] = None) -> None:
-    if type(image) is str:
+    if isinstance(image, str):
         image = cv.imread(image)  # Load the image
         if scale := get_scale_factor(image):
             image = rescale(scale, image)
