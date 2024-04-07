@@ -212,7 +212,7 @@ class ModelTrainer:
             self.writer.close()
 
         stop_time = perf_counter()
-        total_time = timedelta(seconds=stop_time - start_time)
+        total_time = timedelta(seconds=round(stop_time - start_time))
         logger.info(f"Model Training Completed! Total Time: {total_time}")
 
     def save_checkpoint(self) -> None:
