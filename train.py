@@ -6,8 +6,8 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision.transforms import v2
 
 from data.build_dataset import TextDetectionDataset, TextRecognitionDataset
-from models.detection.det_db import DB
-from models.recognition.rec_crnn import CRNN
+from models.detection.db.db_model import DB
+from models.recognition.crnn.crnn_model import CRNN
 from utilities.logger_setup import setup_logging
 from utilities.telegram_bot import TelegramBot
 from utilities.trainer import ModelTrainer
@@ -48,13 +48,7 @@ def train_text_detection(lang: Types.Language) -> None:
     val_ds = TextDetectionDataset(lang, Types.val, val_transformer)
     logger.info("Loading Completed...")
 
-    model_params = {
-        "input_shape": (3, height, width),
-        "initial_filters": 8,
-        "num_fc1": 100,
-        "dropout_rate": 0.25,
-        "num_classes": 2,
-    }
+    model_params = {"backbone": "deformable_resnet50", "pretrained": True}
     model = DB(model_params)
     # loss_fn = nn.CrossEntropyLoss()
     # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
