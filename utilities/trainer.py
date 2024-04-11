@@ -10,8 +10,6 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from utilities.utils import collate_fn
-
 logger = logging.getLogger(__name__)
 
 
@@ -62,7 +60,7 @@ class ModelTrainer:
             batch_size,
             True,
             num_workers=num_workers,
-            collate_fn=collate_fn,
+            collate_fn=dataset.collate_fn,
             pin_memory=self.use_cuda
         )
         return data_loader

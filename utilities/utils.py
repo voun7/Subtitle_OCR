@@ -18,11 +18,3 @@ class Types:
 
 def calc_mean_std():
     pass
-
-
-def collate_fn(batch: list) -> tuple:
-    """
-    If your dataset contains samples with varying sizes (e.g. images with different numbers of bounding boxes or texts),
-    you need a collate function to properly batch them together.
-    """
-    return tuple(zip(*batch))

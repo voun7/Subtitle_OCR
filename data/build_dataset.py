@@ -26,6 +26,14 @@ class TextDetectionDataset(Dataset):
             image, bboxes = self.transform(image, bboxes)
         return image, bboxes
 
+    @staticmethod
+    def collate_fn(batch: list) -> tuple:
+        """
+        If your dataset contains samples with varying sizes (e.g. images with different numbers of bounding boxes),
+        you need a collate function to properly batch them together.
+        """
+        return tuple(zip(*batch))
+
 
 class TextRecognitionDataset(Dataset):
     def __init__(self, lang: Types.Language, data_type: Types.DataType, transform=None) -> None:
@@ -43,3 +51,11 @@ class TextRecognitionDataset(Dataset):
         if self.transform:
             image = self.transform(image)
         return image, texts
+
+    @staticmethod
+    def collate_fn(batch: list) -> tuple:
+        """
+        If your dataset contains samples with varying sizes (e.g. images with different numbers of texts),
+        you need a collate function to properly batch them together.
+        """
+        return tuple(zip(*batch))
