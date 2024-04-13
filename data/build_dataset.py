@@ -17,11 +17,12 @@ class TextDetectionDataset(Dataset):
 
     def __getitem__(self, idx: int) -> tuple:
         idx = self.img_data_keys[idx]
-        img_path, bboxes = idx, self.img_data[idx]
+        img_path, img_labels = idx, self.img_data[idx]
         image = read_image(str(img_path))
         image = tv_tensors.Image(image)
         orig_height, orig_width = image.shape[-2:]
-        bboxes = tv_tensors.BoundingBoxes(bboxes, format="XYXY", canvas_size=(orig_height, orig_width))
+        # bboxes = tv_tensors.BoundingBoxes(bboxes, format="XYXY", canvas_size=(orig_height, orig_width))
+        bboxes = img_labels["bbox"]
         if self.transform:
             image, bboxes = self.transform(image, bboxes)
         return image, bboxes
@@ -46,11 +47,11 @@ class TextRecognitionDataset(Dataset):
 
     def __getitem__(self, idx: int) -> tuple:
         idx = self.img_data_keys[idx]
-        img_path, texts = idx, self.img_data[idx]
+        img_path, img_labels = idx, self.img_data[idx]
         image = read_image(str(img_path))
         if self.transform:
             image = self.transform(image)
-        return image, texts
+        return image, img_labels["text"]
 
     @staticmethod
     def collate_fn(batch: list) -> tuple:
