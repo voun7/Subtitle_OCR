@@ -3,17 +3,26 @@ from typing import NewType, Iterable, Generator
 
 class Types:
     ModelType = NewType('ModelType', str)
+    ModelName = NewType('ModelName', str)
     DataType = NewType('DataType', str)
     Language = NewType('Language', str)
 
     det = ModelType("detection")
     rec = ModelType("recognition")
 
+    db = ModelName("Differentiable Binarization")
+    db_pp = ModelName("Differentiable Binarization ++")
+    crnn = ModelName("Convolutional Recurrent Neural Network")
+
     train = DataType("train")  # Training
     val = DataType("val")  # Validation
 
     english = Language("en")
     chinese = Language("ch")
+
+
+def pairwise_tuples(data):
+    return tuple(zip(data[::2], data[1::2]))
 
 
 def flatten_iter(iterable: Iterable) -> Generator:

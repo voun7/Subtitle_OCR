@@ -5,7 +5,7 @@ from time import perf_counter
 import numpy as np
 from scipy.io import loadmat
 
-from utilities.utils import Types, flatten_iter
+from utilities.utils import Types, flatten_iter, pairwise_tuples
 from utilities.visualize import visualize_datasource
 
 DATASET_DIR = r"C:\Users\Victor\Documents\Python Datasets\Subtitle_OCR"
@@ -15,13 +15,13 @@ DATASET_DIR = r"C:\Users\Victor\Documents\Python Datasets\Subtitle_OCR"
 # sample = {
 #     # image file path
 #     "train_images/img_1.jpg": [
-#         # ---image bbox (x1,y1,x2,y2,x3,y3,x4,y4)---    ---image texts---
-#         {"bbox": (2, 23, 82, 63, 82, 238, 22, 238), "text": "Sample Text"},
-#         {"bbox": (4, 56, 32, 24, 43, 43, 34, 23), "text": "Sample Text 2"},
+#         # ---image bbox ((x1,y1),(x2,y2),(x3,y3),(x4,y4))---    ---image texts---
+#         {'bbox': ((10.0, 16.0), (50.0, 16.0), (50.0, 164.0), (10.0, 164.0)), "text": "Sample Text"},
+#         {"bbox": ((1158.0, 1411.0), (1263.0, 1411.0), (1263.0, 1700.0), (1158.0, 1700.0)), "text": "Sample Text 2"},
 #     ],
 #     "train_images/img_100.jpg": [
-#         {"bbox": (2, 23, 82, 63, 82, 38, 22, 8), "text": "Sample Text"},
-#         {"bbox": (4, 56, 32, 4, 43, 43, 34, 3), "text": "Sample Text 2"},
+#         {"bbox": ((26.0, 1659.0), (99.0, 1664.0), (88.0, 1803.0), (16.0, 1797.0)), "text": "Sample Text"},
+#         {"bbox": ((0.0, 60.0), (209.0, 1.0), (229.0, 70.0), (19.0, 129.0)), "text": "Sample Text 2"},
 #     ]
 # }
 
@@ -74,7 +74,7 @@ class ICDAR2017RCTWData:
             img_bb_txt, labels = [], labels.read_text("utf-8-sig").splitlines()
             for label in labels:
                 label = label.split(',', maxsplit=9)
-                bbox = tuple(map(int, label[:8]))
+                bbox = pairwise_tuples(tuple(map(float, label[:8])))
                 text = label[9:][0].strip('\"')
                 img_bb_txt.append({"bbox": bbox, "text": text})
             img_data[img_path] = img_bb_txt
@@ -100,7 +100,7 @@ class ICDAR2019LSVTFullData:
         for file in img_files:
             img_bb_txt = []
             for label in labels[file.stem]:
-                bbox = tuple(flatten_iter(label["points"]))
+                bbox = label["points"]
                 text = label["transcription"]
                 if text in self.ignore_tags:
                     continue
@@ -176,7 +176,7 @@ class SynthTextData:
             assert len(bboxes) == len(texts)
             img_bb_txt = []
             for bbox, text in zip(bboxes, texts):
-                img_bb_txt.append({"bbox": tuple(bbox), "text": text})
+                img_bb_txt.append({"bbox": pairwise_tuples(bbox), "text": text})
             all_labels[name] = img_bb_txt
         with open(self.labels_json_file, "w") as outfile:
             json.dump(all_labels, outfile)
@@ -218,7 +218,7 @@ class TextOCR01Data:
             text = val["utf8_string"]
             if len(text) > 1:
                 img_id = val["id"].split('_')[0]
-                bbox = tuple(val["points"])
+                bbox = pairwise_tuples(val["points"])
                 all_labels.setdefault(img_id, []).append({"bbox": bbox, "text": text})
         return all_labels
 

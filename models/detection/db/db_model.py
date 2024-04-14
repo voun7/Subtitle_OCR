@@ -4,8 +4,9 @@ import torch.nn.functional as F
 from models.detection.db.backbones.mobilenetv3 import mobilenet_v3_small, mobilenet_v3_large
 from models.detection.db.backbones.resnet import resnet18, resnet34, resnet50, resnet101, resnet152, \
     deformable_resnet18, deformable_resnet50
-from models.detection.db.seg_body import FPN
+from models.detection.db.seg_body import FPN, ASFBlock
 from models.detection.db.seg_head import DBHead
+from utilities.utils import Types
 
 BACKBONES = {
     'resnet18': {'models': resnet18, 'out': [64, 128, 256, 512]},
@@ -22,14 +23,18 @@ BACKBONES = {
 
 class DB(nn.Module):
     def __init__(self, params):
-        super(DB, self).__init__()
+        super().__init__()
         backbone = params['backbone']
         pretrained = params['pretrained']
 
         backbone, backbone_out = BACKBONES[backbone]["models"], BACKBONES[backbone]["out"]
         self.backbone = backbone(pretrained=pretrained)
 
-        self.segmentation_body = FPN(backbone_out, inner_channels=256)
+        if params['name'] == Types.db:
+            self.segmentation_body = FPN(backbone_out, inner_channels=256)
+        elif params['name'] == Types.db_pp:
+            self.segmentation_body = ASFBlock(backbone_out, inter_channels=256)
+
         self.segmentation_head = DBHead(self.segmentation_body.out_channels)
 
     def forward(self, x):
@@ -39,19 +44,3 @@ class DB(nn.Module):
         segmentation_head_out = self.segmentation_head(segmentation_body_out)
         y = F.interpolate(segmentation_head_out, size=(image_height, image_width), mode='bilinear', align_corners=True)
         return y
-
-
-class DBPP(nn.Module):
-    def __init__(self, params):
-        super(DBPP, self).__init__()
-        backbone = params['backbone']
-        pretrained = params['pretrained']
-
-        backbone, backbone_out = BACKBONES[backbone]["models"], BACKBONES[backbone]["out"]
-        self.backbone = backbone(pretrained=pretrained)
-
-        self.segmentation_body = ''
-        self.segmentation_head = ''
-
-    def forward(self, x):
-        pass

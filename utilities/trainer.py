@@ -1,7 +1,8 @@
 import logging
 import random
 from copy import deepcopy
-from datetime import timedelta, datetime
+from datetime import timedelta
+from pathlib import Path
 from time import perf_counter
 
 import numpy as np
@@ -15,26 +16,35 @@ logger = logging.getLogger(__name__)
 
 class ModelTrainer:
     def __init__(self, model, params: dict) -> None:
+        """
+        Model trainer for program.
+        The batches from the dataloader should be a dictionary.
+        The losses from the loss function should be a dictionary.
+        The trainer supports optional use of metrics that should be a dictionary.
+        """
         # Here we define the attributes of our class
         self.use_cuda = torch.cuda.is_available()
         self.device = 'cuda' if self.use_cuda else 'cpu'
         # We start by storing the arguments as attributes to use them later
         self.model = self.init_model(model)
         self.loss_fn = params["loss_fn"]
+        self.metrics = params.get("metrics")
         self.optimizer = params["optimizer"]
         self.sanity_check = params["sanity_check"]
         self.lr_scheduler = params["lr_scheduler"]
-        self.model_file = params["model_file"]
+        self.model_dir = Path(params["model_dir"])
+        self.model_filename = Path(params["model_filename"])
+        self.model_dir.mkdir(parents=True, exist_ok=True)
 
-        # These attributes are defined here, but since they are
-        # not informed at the moment of creation, we keep them None
+        # These attributes are defined here, but since they are not needed at the moment of creation, we keep them None
         self.train_loader = None
         self.val_loader = None
-        self.writer = None
+
+        self.writer = SummaryWriter()
 
         # These attributes are going to be computed internally
-        self.losses = []
-        self.val_losses = []
+        self.losses = {}
+        self.val_losses = {}
         self.total_epochs = 0
 
         # Creates the train_step function for our model, loss function and optimizer
@@ -52,32 +62,19 @@ class ModelTrainer:
             model = model.to(self.device)
         return model
 
-    def init_dataloader(self, dataset, batch_size: int, num_workers: int) -> DataLoader:
+    def init_dataloader(self, dataset, batch_size: int, num_workers: int, shuffle: bool) -> DataLoader:
         if self.use_cuda:
             batch_size *= torch.cuda.device_count()
-        data_loader = DataLoader(
-            dataset,
-            batch_size,
-            True,
-            num_workers=num_workers,
-            collate_fn=dataset.collate_fn,
-            pin_memory=self.use_cuda
-        )
+        data_loader = DataLoader(dataset, batch_size, shuffle, num_workers=num_workers,
+                                 collate_fn=getattr(dataset, "collate_fn", None), pin_memory=self.use_cuda)
         return data_loader
 
     def set_loaders(self, train_ds, val_ds, batch_size: int, val_batch_size: int, num_workers: int) -> None:
         """
         This method allows the user to define which train_loader and val_loader to use.
         """
-        self.train_loader = self.init_dataloader(train_ds, batch_size, num_workers)
-        self.val_loader = self.init_dataloader(val_ds, val_batch_size, num_workers)
-
-    def set_tensorboard(self, name: str, folder: str = 'runs') -> None:
-        """
-        This method allows the user to define a SummaryWriter to interface with TensorBoard.
-        """
-        suffix = datetime.now().strftime('%Y%m%d%H%M%S')
-        self.writer = SummaryWriter(f'{folder}/{name}_{suffix}')
+        self.train_loader = self.init_dataloader(train_ds, batch_size, num_workers, True)
+        self.val_loader = self.init_dataloader(val_ds, val_batch_size, num_workers, False)
 
     def _make_train_step_fn(self):
         """
@@ -85,20 +82,26 @@ class ModelTrainer:
         :return: The function that will be called inside the train loop.
         """
 
-        def perform_train_step_fn(x, y):
+        def perform_train_step_fn(x: torch.Tensor, y: dict) -> tuple[dict, dict | None]:
+            """
+            :param x: Image Tensor
+            :param y: A dictionary with tensor values.
+            :return: A loss dict and a metric dict.
+            """
             # Sets model to TRAIN mode
             self.model.train()
             # Step 1 - Computes our model's predicted output - forward pass
             output = self.model(x)
-            # Step 2 - Computes the loss
+            # Step 2 - Computes the loss and metrics
             loss = self.loss_fn(output, y)
+            metric = self.compute_metrics(output, y)
             # Step 3 - Computes gradients for both "a" and "b" parameters
-            loss.backward()
+            loss['loss'].backward()
             # Step 4 - Updates parameters using gradients and the learning rate
             self.optimizer.step()
             self.optimizer.zero_grad()
             # Returns the loss
-            return loss.item()
+            return loss, metric
 
         return perform_train_step_fn
 
@@ -107,19 +110,45 @@ class ModelTrainer:
         Builds function that performs a step in the validation loop.
         """
 
-        def perform_val_step_fn(x, y):
+        def perform_val_step_fn(x: torch.Tensor, y: dict) -> tuple[dict, dict | None]:
+            """
+            :param x: Image Tensor
+            :param y: A dictionary with tensor values.
+            :return: A loss dict and a metric dict.
+            """
             # Sets model to EVAL mode
             self.model.eval()
             # Step 1 - Computes our model's predicted output - forward pass
             output = self.model(x)
-            # Step 2 - Computes the loss
+            # Step 2 - Computes the loss and metrics
             loss = self.loss_fn(output, y)
+            metric = self.compute_metrics(output, y, True)
             # There is no need to compute Steps 3 and 4, since we don't update parameters during evaluation
-            return loss.item()
+            return loss, metric
 
         return perform_val_step_fn
 
-    def _mini_batch(self, validation: bool = False):
+    def dict_to_device(self, batch: dict) -> dict:
+        for key, value in batch.items():
+            if isinstance(value, torch.Tensor):
+                batch[key] = value.to(self.device)
+        return batch
+
+    @staticmethod
+    def append_dict_val(dict_1: dict, dict_2: dict) -> None:
+        """
+        Modify the dictionary's values in place.
+        :param dict_1: The dictionary's value that will be used to append dict_2
+        :param dict_2: The dictionary's value that will be appended. Should have a list value or no value.
+        """
+        for key, value in dict_1.items():
+            if isinstance(value, torch.Tensor):
+                value = value.item()
+            value = round(value, 4)
+            dict_1[key] = value
+            dict_2.setdefault(key, []).append(value)
+
+    def _mini_batch(self, validation: bool = False) -> tuple[dict, dict | None]:
         """
         The mini-batch can be used with both loaders.
         :param validation: Determines which loader and corresponding step function is going to be used
@@ -129,28 +158,29 @@ class ModelTrainer:
         else:
             data_loader, step_fn, mode = self.train_loader, self.train_step_fn, "Training"
 
-        if data_loader is None:
-            return None
-
-        # Once the data loader and step function, this is the same
-        # mini-batch loop we had before
-        mini_batch_losses, batch_size = [], len(data_loader)
-        for index, inputs in enumerate(data_loader):
-            x_batch, y_batch = inputs
-            x_batch = x_batch.to(self.device)
-            y_batch = y_batch.to(self.device)
-
-            mini_batch_loss = step_fn(x_batch, y_batch)
-            mini_batch_losses.append(mini_batch_loss)
+        mini_batch_losses, mini_batch_metrics, metric, batch_size = {}, {}, None, len(data_loader)
+        for index, batch in enumerate(data_loader):
+            batch = self.dict_to_device(batch)
+            mini_batch_loss, mini_batch_metric = step_fn(batch["image"], batch)
+            self.append_dict_val(mini_batch_loss, mini_batch_losses)
+            if self.metrics:
+                self.append_dict_val(mini_batch_metric, mini_batch_metrics)
             pos = (self.total_epochs + (index + 1) / batch_size)
-            print(f"\rEpoch: {pos:.3f}, Batch {mode} Loss: {mini_batch_loss:.6f}", end='', flush=True)
+            metric_txt = f" Metric: {mini_batch_metric}," if self.metrics else ""
+            print(f"\rEpoch: {pos:.3f}, Batch {mode}{metric_txt} Loss: {mini_batch_loss}", end='', flush=True)
 
             # break the loop in case of sanity check
             if self.sanity_check is True:
                 break
 
-        loss = np.mean(mini_batch_losses)
-        return loss
+        loss = {loss_name: np.mean(loss_values) for loss_name, loss_values in mini_batch_losses.items()}
+        if self.metrics:
+            metric = {metric_name: np.mean(metric_values) for metric_name, metric_values in mini_batch_metrics.items()}
+        return loss, metric
+
+    def compute_metrics(self, predictions: torch.Tensor, batch: dict, validation: bool = False) -> dict | None:
+        if self.metrics:
+            return self.metrics(predictions, batch, validation)
 
     def set_seed(self, seed: int) -> None:
         torch.backends.cudnn.deterministic = True
@@ -163,57 +193,78 @@ class ModelTrainer:
         except AttributeError:
             pass
 
+    def get_lr(self) -> float:
+        """
+        get current learning rate
+        """
+        for param_group in self.optimizer.param_groups:
+            return param_group['lr']
+
+    @staticmethod
+    def clear_previous_print() -> None:
+        """
+        Clear the previous print line.
+        """
+        print(end="\r", flush=True)
+
     def train(self, n_epochs: int, seed: int = 42) -> None:
+        assert self.train_loader and self.val_loader
         self.set_seed(seed)  # To ensure reproducibility of the training process
         start_time = perf_counter()
         # initialize the best loss to a large value
         best_loss, best_model_wts = float('inf'), deepcopy(self.model.state_dict())
 
         for epoch in range(n_epochs):
-            # Keeps track of the numbers of epochs by updating the corresponding attribute
-            self.total_epochs += 1
-
-            # Inner loop
+            current_lr = self.get_lr()
+            # Inner Loops
             # Performs training using mini-batches
-            loss = self._mini_batch()
-            self.losses.append(loss)
-
-            # VALIDATION
+            loss, metric = self._mini_batch()
+            self.append_dict_val(loss, self.losses)
+            # Validation
             with torch.no_grad():  # no gradients in validation!
                 # Performs evaluation using mini-batches
-                val_loss = self._mini_batch(validation=True)
-                self.val_losses.append(val_loss)
+                val_loss, val_metric = self._mini_batch(validation=True)
+                self.append_dict_val(val_loss, self.val_losses)
 
             # store best model
-            if val_loss < best_loss:
-                best_loss, best_model_wts = val_loss, deepcopy(self.model.state_dict())
-                self.save_checkpoint()  # store weights into a local file
+            if val_loss["loss"] < best_loss:
+                best_loss, best_model_wts = val_loss["loss"], deepcopy(self.model.state_dict())
+                self.save_checkpoint(best_loss)  # store weights into a local file
+                self.clear_previous_print()
                 logger.info("Saving best model weights!")
 
             # learning rate schedule
-            self.lr_scheduler.step(val_loss)
-            if self.lr_scheduler.get_lr() != self.lr_scheduler.get_last_lr():
+            self.lr_scheduler.step(val_loss["loss"])
+            if current_lr != self.lr_scheduler.get_last_lr()[0]:
+                self.clear_previous_print()
                 logger.info("Loading best model weights!")
                 self.model.load_state_dict(best_model_wts)
 
-            logger.info(f"Epoch: {self.total_epochs}/{n_epochs}, Current lr={self.lr_scheduler.get_lr} "
-                        f"Training Loss: {loss:.6f}, Validation Loss: {val_loss:.6f}")
+            self.total_epochs += 1  # Keeps track of the total numbers of epochs
+            self.clear_previous_print()
+            if hasattr(self.metrics, "gather_val_metrics"):
+                val_metric.update(self.metrics.gather_val_metrics())
+            metric_txt = f"Training Metric: {metric}, Validation Metric: {val_metric}, \n" if self.metrics else ""
+            logger.info(f"Epoch: {self.total_epochs}/{n_epochs}, Current lr={current_lr}, \n{metric_txt}"
+                        f"Training Loss: {loss}, Validation Loss: {val_loss}\n")
 
-            # If a SummaryWriter has been set...
-            if self.writer:
-                scalars = {'training loss': loss, "validation loss": val_loss}
-                # Records both losses for each epoch under the main tag "loss"
-                self.writer.add_scalars(main_tag='loss', tag_scalar_dict=scalars, global_step=epoch)
+            # Records the values for each epoch
+            self.writer.add_scalar("learning rate", current_lr, epoch)
+            self.writer.add_scalars("training loss", loss, epoch)
+            self.writer.add_scalars("validation loss", val_loss, epoch)
+            if self.metrics:
+                # For validation metrics that are generated per epoch instead of per batch
+                self.writer.add_scalars("training metric", metric, epoch)
+                self.writer.add_scalars("validation metric", val_metric, epoch)
 
-        if self.writer:
-            # Closes the writer
-            self.writer.close()
+        self.writer.close()  # Closes the writer
 
-        stop_time = perf_counter()
-        total_time = timedelta(seconds=round(stop_time - start_time))
-        logger.info(f"Model Training Completed! Total Time: {total_time}")
+        self.save_model()
+        total_time = timedelta(seconds=round(perf_counter() - start_time))
+        logger.info(f"Model Training Completed & Model Saved! Total Time: {total_time}")
+        logger.debug(f"{self.losses = }, \n{self.val_losses = }")
 
-    def save_checkpoint(self) -> None:
+    def save_checkpoint(self, best_loss) -> None:
         """
         Builds dictionary with all elements for resuming training.
         """
@@ -224,12 +275,11 @@ class ModelTrainer:
             'loss': self.losses,
             'val_loss': self.val_losses
         }
-        torch.save(checkpoint, self.model_file)
+        torch.save(checkpoint, self.model_dir.joinpath(f"{self.model_filename} (checkpoint) ({best_loss}).pt"))
 
-    def load_checkpoint(self) -> None:
+    def load_checkpoint(self, model_filename: str) -> None:
         # Loads dictionary
-        checkpoint = torch.load(self.model_file)
-
+        checkpoint = torch.load(model_filename)
         # Restore state for model and optimizer
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -237,26 +287,15 @@ class ModelTrainer:
         self.total_epochs = checkpoint['epoch']
         self.losses = checkpoint['loss']
         self.val_losses = checkpoint['val_loss']
-
+        logger.info(f"Loading checkpoint: model: {self.model}, optimizer: {self.optimizer}, "
+                    f"total epochs: {self.total_epochs}, \nlosses: {self.losses}, \nval losses: {self.val_losses}")
         self.model.train()  # always use TRAIN for resuming training
 
-    def predict(self, x):
-        # Set is to evaluation mode for predictions
-        self.model.eval()
-        # Takes aNumpy input and make it a float tensor
-        x_tensor = torch.as_tensor(x).float()
-        # Send input to device and uses model for prediction
-        output_tensor = self.model(x_tensor.to(self.device))
-        # Set it back to train mode
-        self.model.train()
-        # Detaches it, brings it to CPU and back to Numpy
-        return output_tensor.detach().cpu().numpy()
+    def save_model(self) -> None:
+        torch.save(self.model.state_dict(), self.model_dir.joinpath(f"{self.model_filename}.pt"))
 
-    def add_graph(self):
+    def add_graph(self) -> None:
         # Fetches a single mini-batch, so we can use add_graph
         if self.train_loader and self.writer:
             x_sample, y_sample = next(iter(self.train_loader))
             self.writer.add_graph(self.model, x_sample.to(self.device))
-
-    def count_parameters(self):
-        return sum(p.numel() for p in self.model.parameters() if p.requires_grad)

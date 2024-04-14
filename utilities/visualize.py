@@ -1,6 +1,7 @@
 import cv2 as cv
+import numpy as np
 
-from utilities.utils import pascal_voc_bb
+from utilities.utils import pascal_voc_bb, flatten_iter
 
 
 def rescale(scale: float, frame=None, bbox: tuple = None):
@@ -32,6 +33,26 @@ def display_image(image, win_name: str) -> None:
     cv.destroyAllWindows()
 
 
+def visualize_np_image(image: np.ndarray, title: str = None) -> None:
+    if len(image.shape) > 2 and image.shape[-1] > 3:
+        image = np.moveaxis(image, 0, -1)  # change image data format from [C, H, W] to [H, W, C]
+    if scale := get_scale_factor(image):
+        image = rescale(scale, image)
+    title = f"{title} - " or ""
+    display_image(image, f"{title}Image Rescale Value: {round(scale, 4) if scale else scale}")
+
+
+def visualize_dataset(dataset, num: int = 10) -> None:
+    ds_len = len(dataset)
+    for _ in range(num):
+        idx = np.random.randint(ds_len)
+        data = dataset[idx]
+        print("Image Path", data["image_path"])
+        for key, val in data.items():
+            if isinstance(val, np.ndarray):
+                visualize_np_image(val, key)
+
+
 def visualize_datasource(image: str, labels: list, put_text: bool = False) -> None:
     image = cv.imread(image)  # Load the image
     if scale := get_scale_factor(image):
@@ -39,7 +60,7 @@ def visualize_datasource(image: str, labels: list, put_text: bool = False) -> No
 
     for label in labels:
         bbox, text = label["bbox"], label["text"]
-        if bbox:
+        if bbox := tuple(flatten_iter(bbox)):
             bbox = rescale(scale, bbox=bbox) if scale else bbox
             x_min, y_min, x_max, y_max = map(int, pascal_voc_bb(bbox))  # Change type to int and change bbox format
             cv.rectangle(image, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)  # Draw the bbox on the image
