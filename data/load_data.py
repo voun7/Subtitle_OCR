@@ -51,6 +51,30 @@ class ChStreetViewTxtRecData:
         return img_data
 
 
+class ICDAR2015Data:
+    def __init__(self, data_type: Types.DataType) -> None:
+        """
+        ICDAR 2015 Dataset (det & rec) (en)
+        source: https://rrc.cvc.uab.es/?ch=4
+        """
+        self.dataset_dir = Path(f"{DATASET_DIR}/ICDAR 2015/{data_type}")
+        self.img_dir = self.dataset_dir / "images"
+        self.labels_dir = self.dataset_dir / "labels"
+
+    def load_data(self) -> dict:
+        img_files, img_labels = list(self.img_dir.iterdir()), list(self.labels_dir.iterdir())
+        img_data = {}
+        for img_path, label_path in zip(img_files, img_labels):
+            img_bb_txt, labels = [], label_path.read_text("utf-8-sig").splitlines()
+            for label in labels:
+                label = label.split(',', maxsplit=8)
+                bbox = pairwise_tuples(tuple(map(float, label[:8])))
+                text = label[8:][0]
+                img_bb_txt.append({"bbox": bbox, "text": text})
+            img_data[img_path] = img_bb_txt
+        return img_data
+
+
 class ICDAR2017RCTWData:
     def __init__(self, data_type: Types.DataType) -> None:
         """
@@ -91,7 +115,6 @@ class ICDAR2019LSVTFullData:
         self.dataset_dir = Path(f"{DATASET_DIR}/ICDAR 2019 LSVT")
         self.img_dir = self.dataset_dir / "train_full"
         self.labels_file = self.dataset_dir / "train_full_labels.json"
-        self.ignore_tags = ["###"]
 
     def load_img_labels(self, img_files: list) -> dict:
         with open(self.labels_file) as file:
@@ -102,8 +125,6 @@ class ICDAR2019LSVTFullData:
             for label in labels[file.stem]:
                 bbox = label["points"]
                 text = label["transcription"]
-                if text in self.ignore_tags:
-                    continue
                 img_bb_txt.append({"bbox": bbox, "text": text})
             img_data[file] = img_bb_txt
         return img_data
@@ -294,11 +315,13 @@ def load_data(lang: Types.Language, model_type: Types.ModelType, data_type: Type
     if lang == Types.english:
         if model_type == Types.det:
             return merge_data_sources(
+                ICDAR2015Data(data_type),
                 # SynthTextData(data_type),
-                TextOCR01Data(data_type)
+                # TextOCR01Data(data_type),
             )
         elif model_type == Types.rec:
             return merge_data_sources(
+                ICDAR2015Data(data_type),
                 SynthTextData(data_type),
                 TextOCR01Data(data_type),
                 TRDGSyntheticData(lang, data_type)
