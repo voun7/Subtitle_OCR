@@ -1,3 +1,4 @@
+# DB & DB++ algorithm (Differentiable Binarization)
 import torch.nn as nn
 import torch.nn.functional as F
 

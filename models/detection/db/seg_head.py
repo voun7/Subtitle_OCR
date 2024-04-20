@@ -1,4 +1,3 @@
-# Author of original: zhoujun
 import torch
 from torch import nn
 
@@ -25,7 +24,8 @@ class DBHead(nn.Module):
             nn.BatchNorm2d(in_channels // 4), nn.ReLU(inplace=True),
             nn.ConvTranspose2d(in_channels // 4, in_channels // 4, 2, 2),
             nn.BatchNorm2d(in_channels // 4), nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(in_channels // 4, 1, 2, 2), nn.Sigmoid())
+            nn.ConvTranspose2d(in_channels // 4, 1, 2, 2),
+            nn.Sigmoid())
         self.binarize.apply(self.weights_init)
 
         self.thresh = self._init_thresh(in_channels)
@@ -59,8 +59,10 @@ class DBHead(nn.Module):
             nn.BatchNorm2d(inner_channels // 4),
             nn.ReLU(inplace=True),
             self._init_up_sample(inner_channels // 4, inner_channels // 4, smooth=smooth, bias=bias),
-            nn.BatchNorm2d(inner_channels // 4), nn.ReLU(inplace=True),
-            self._init_up_sample(inner_channels // 4, 1, smooth=smooth, bias=bias), nn.Sigmoid()
+            nn.BatchNorm2d(inner_channels // 4),
+            nn.ReLU(inplace=True),
+            self._init_up_sample(inner_channels // 4, 1, smooth=smooth, bias=bias),
+            nn.Sigmoid()
         )
         return self.thresh
 

@@ -77,11 +77,6 @@ class DetectionIoUEvaluator:
         gt_pol_points = []
         det_pol_points = []
 
-        # Array of Ground Truth Polygons' keys marked as don't Care
-        gt_dont_care_pols_num = []
-        # Array of Detected Polygons' matched with a don't Care GT
-        det_dont_care_pols_num = []
-
         pairs = []
         det_matched_nums = []
 
@@ -97,29 +92,19 @@ class DetectionIoUEvaluator:
             gt_pols.append(gt_pol)
             gt_pol_points.append(points)
 
-        evaluation_log += "GT polygons: " + str(len(gt_pols)) + (
-            " (" + str(len(gt_dont_care_pols_num)) + " don't care)\n" if len(gt_dont_care_pols_num) > 0 else "\n")
+        evaluation_log += "GT polygons: " + str(len(gt_pols))
 
         for n in range(len(prediction)):
             points = prediction[n]['bbox']
+
             if not Polygon(points).is_valid or not Polygon(points).is_simple:
                 continue
 
             det_pol = points
             det_pols.append(det_pol)
             det_pol_points.append(points)
-            if len(gt_dont_care_pols_num) > 0:
-                for dont_care_pol in gt_dont_care_pols_num:
-                    dont_care_pol = gt_pols[dont_care_pol]
-                    intersected_area = get_intersection(dont_care_pol, det_pol)
-                    pd_dimensions = Polygon(det_pol).area
-                    precision = 0 if pd_dimensions == 0 else intersected_area / pd_dimensions
-                    if precision > self.area_precision_constraint:
-                        det_dont_care_pols_num.append(len(det_pols) - 1)
-                        break
 
-        evaluation_log += "DET polygons: " + str(len(det_pols)) + (" (" + str(len(
-            det_dont_care_pols_num)) + " don't care)\n" if len(det_dont_care_pols_num) > 0 else "\n")
+        evaluation_log += " DET polygons: " + str(len(det_pols))
 
         if len(gt_pols) > 0 and len(det_pols) > 0:
             # Calculate IoU and precision matrix's
@@ -141,18 +126,17 @@ class DetectionIoUEvaluator:
                         iou_mat[gtNum, detNum] = iou_rotate(pD, pG)
             for gtNum in range(len(gt_pols)):
                 for detNum in range(len(det_pols)):
-                    if (gt_rect_mat[gtNum] == 0 and det_rect_mat[detNum] == 0 and gtNum not in gt_dont_care_pols_num
-                            and detNum not in det_dont_care_pols_num):
+                    if gt_rect_mat[gtNum] == 0 and det_rect_mat[detNum] == 0:
                         if iou_mat[gtNum, detNum] > self.iou_constraint:
                             gt_rect_mat[gtNum] = 1
                             det_rect_mat[detNum] = 1
                             det_matched += 1
                             pairs.append({'gt': gtNum, 'det': detNum})
                             det_matched_nums.append(detNum)
-                            evaluation_log += "Match GT #" + str(gtNum) + " with Det #" + str(detNum) + "\n"
+                            evaluation_log += " Match GT #" + str(gtNum) + " with Det #" + str(detNum)
 
-        num_gt_care = (len(gt_pols) - len(gt_dont_care_pols_num))
-        num_det_care = (len(det_pols) - len(det_dont_care_pols_num))
+        num_gt_care = len(gt_pols)
+        num_det_care = len(det_pols)
         if num_gt_care == 0:
             recall = float(1)
             precision = float(0) if num_det_care > 0 else float(1)
@@ -176,8 +160,6 @@ class DetectionIoUEvaluator:
             'det_pol_points': det_pol_points,
             'gtCare': num_gt_care,
             'detCare': num_det_care,
-            'gtDontCare': gt_dont_care_pols_num,
-            'detDontCare': det_dont_care_pols_num,
             'det_matched': det_matched,
             'evaluation_log': evaluation_log
         }
@@ -207,16 +189,13 @@ if __name__ == '__main__':
     test_predictions = [[{
         'bbox': [(0.1, 0.1), (0.5, 0), (0.5, 1), (0, 1)],
         'text': 1234,
-        'ignore': False,
     }, {
         'bbox': [(0.5, 0.1), (1, 0), (1, 1), (0.5, 1)],
         'text': 5678,
-        'ignore': False,
     }]]
     test_gts = [[{
         'bbox': [(0.1, 0.1), (1, 0), (1, 1), (0, 1)],
         'text': 123,
-        'ignore': False,
     }]]
     test_results = []
     for gt, predictions in zip(test_gts, test_predictions):

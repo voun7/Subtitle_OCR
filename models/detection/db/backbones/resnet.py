@@ -42,7 +42,7 @@ class BasicBlock(nn.Module):
             self.conv2_offset = nn.Conv2d(planes, deformable_groups * offset_channels, kernel_size=3, padding=1)
             self.conv2 = DeformConv2d(planes, planes, kernel_size=3, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(planes)
-        self.down_sample = down_sample
+        self.downsample = down_sample
         self.stride = stride
 
     def forward(self, x):
@@ -60,8 +60,8 @@ class BasicBlock(nn.Module):
             out = self.conv2(out, offset)
         out = self.bn2(out)
 
-        if self.down_sample is not None:
-            residual = self.down_sample(x)
+        if self.downsample is not None:
+            residual = self.downsample(x)
 
         out += residual
         out = self.relu(out)

@@ -1,5 +1,7 @@
 from typing import NewType, Iterable, Generator
 
+import cv2 as cv
+
 
 class Types:
     ModelType = NewType('ModelType', str)
@@ -10,9 +12,9 @@ class Types:
     det = ModelType("detection")
     rec = ModelType("recognition")
 
-    db = ModelName("Differentiable Binarization")
-    db_pp = ModelName("Differentiable Binarization ++")
-    crnn = ModelName("Convolutional Recurrent Neural Network")
+    db = ModelName("DB")
+    db_pp = ModelName("DB++")
+    crnn = ModelName("CRNN")
 
     train = DataType("train")  # Training
     val = DataType("val")  # Validation
@@ -47,3 +49,17 @@ def pascal_voc_bb(bbox: tuple) -> tuple:
     """
     x_values, y_values = bbox[::2], bbox[1::2]
     return min(x_values), min(y_values), max(x_values), max(y_values)
+
+
+def read_image(image_path: str, rgb: bool = True) -> tuple:
+    """
+    Read image with opencv and change color from bgr to rgb.
+    :param image_path: image file location.
+    :param rgb: The color format be will be changed to rgb.
+    :return: image, image_height, image width
+    """
+    image = cv.imread(image_path)
+    if rgb:
+        image = cv.cvtColor(image, cv.COLOR_BGR2RGB)
+    image_height, image_width, _ = image.shape
+    return image, image_height, image_width

@@ -53,7 +53,7 @@ def visualize_dataset(dataset, num: int = 10) -> None:
                 visualize_np_image(val, key)
 
 
-def visualize_datasource(image: str, labels: list, put_text: bool = False) -> None:
+def visualize_data(image: str, labels: list, put_text: bool = False) -> None:
     image = cv.imread(image)  # Load the image
     if scale := get_scale_factor(image):
         image = rescale(scale, image)

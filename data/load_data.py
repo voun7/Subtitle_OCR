@@ -6,7 +6,7 @@ import numpy as np
 from scipy.io import loadmat
 
 from utilities.utils import Types, flatten_iter, pairwise_tuples
-from utilities.visualize import visualize_datasource
+from utilities.visualize import visualize_data
 
 DATASET_DIR = r"C:\Users\Victor\Documents\Python Datasets\Subtitle_OCR"
 
@@ -352,4 +352,4 @@ if __name__ == '__main__':
     for ts_idx in range(0, ts_len, round(ts_len / 200)):
         ts_img_path, ts_img_labels = str(ts_keys[ts_idx]), ts_data[ts_keys[ts_idx]]
         print(f"Image Path: {ts_img_path}\nImage Labels: {ts_img_labels}\n")
-        visualize_datasource(ts_img_path, ts_img_labels)
+        visualize_data(ts_img_path, ts_img_labels)

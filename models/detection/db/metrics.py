@@ -9,10 +9,6 @@ class AverageMeter:
     """Computes and stores the average and current value"""
 
     def __init__(self):
-        self.count = None
-        self.sum = None
-        self.avg = None
-        self.val = None
         self.reset()
 
     def reset(self):
@@ -161,6 +157,7 @@ class DBMetrics:
         accuracy = score_shrink_map['Mean Acc']
         iou_shrink_map = score_shrink_map['Mean IoU']
         if validation:
+            assert predictions.size(1) == 2 and predictions.size(0) == 1, "Validation batch size must be 1!"
             bboxes, scores = self.post_process(batch, predictions)
             raw_metric = self.quad_metrics.measure(batch, (bboxes, scores))
             self.raw_metrics.append(raw_metric)
@@ -175,4 +172,4 @@ class DBMetrics:
         metrics["recall"] = metrics['recall'].avg
         metrics["precision"] = metrics['precision'].avg
         metrics["f_measure"] = metrics['f_measure'].avg
-        return metrics
+        return {key: round(value, 2) for key, value in metrics.items()}

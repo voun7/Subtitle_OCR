@@ -10,21 +10,21 @@ class DBPostProcess:
     """
 
     def __init__(self, thresh=0.3, box_thresh=0.7, max_candidates=1000, un_clip_ratio=1.5):
-        self.min_size = 3
         self.thresh = thresh
         self.box_thresh = box_thresh
         self.max_candidates = max_candidates
         self.un_clip_ratio = un_clip_ratio
+        self.min_size = 3
 
     def __call__(self, batch, prediction, is_output_polygon=False):
         """
-        batch: image, polygons, ignore_tags
+        batch: image, polygons
+        or
         batch: a dict produced by dataloaders.
             image: tensor of shape (N, C, H, W).
-            polygons: tensor of shape (N, K, 4, 2), the polygons of objective regions.
-            ignore_tags: tensor of shape (N, K), indicates whether a region is ignorable or not.
+            bbox: tensor of shape (N, K, 4, 2), the polygons of objective regions.
             shape: the original shape of images.
-            filename: the original filenames of images.
+            image_path: the original filenames of images.
         prediction:
             binary: text region segmentation map, with shape (N, H, W)
             thresh: [if exists] thresh hold prediction with shape (N, H, W)
@@ -63,7 +63,7 @@ class DBPostProcess:
         contours, _ = cv2.findContours((bitmap * 255).astype(np.uint8), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
         for contour in contours[:self.max_candidates]:
-            epsilon = 0.005 * cv2.arcLength(contour, True)
+            epsilon = 0.002 * cv2.arcLength(contour, True)
             approx = cv2.approxPolyDP(contour, epsilon, True)
             points = approx.reshape((-1, 2))
             if points.shape[0] < 4:
@@ -74,7 +74,7 @@ class DBPostProcess:
                 continue
 
             if points.shape[0] > 2:
-                box = self.un_clip(points, un_clip_ratio=self.un_clip_ratio)
+                box = self.un_clip(points, self.un_clip_ratio)
                 if len(box) > 1:
                     continue
             else:
@@ -118,7 +118,7 @@ class DBPostProcess:
             if self.box_thresh > score:
                 continue
 
-            box = self.un_clip(points, un_clip_ratio=self.un_clip_ratio).reshape(-1, 1, 2)
+            box = self.un_clip(points, self.un_clip_ratio).reshape(-1, 1, 2)
             box, sside = self.get_mini_boxes(box)
             if sside < self.min_size + 2:
                 continue
@@ -168,13 +168,13 @@ class DBPostProcess:
     def box_score_fast(bitmap, _box):
         h, w = bitmap.shape[:2]
         box = _box.copy()
-        x_min = np.clip(np.floor(box[:, 0].min()).astype("int32"), 0, w - 1)
-        x_max = np.clip(np.ceil(box[:, 0].max()).astype("int32"), 0, w - 1)
-        y_min = np.clip(np.floor(box[:, 1].min()).astype("int32"), 0, h - 1)
-        y_max = np.clip(np.ceil(box[:, 1].max()).astype("int32"), 0, h - 1)
+        x_min = np.clip(np.floor(box[:, 0].min()).astype(np.int32), 0, w - 1)
+        x_max = np.clip(np.ceil(box[:, 0].max()).astype(np.int32), 0, w - 1)
+        y_min = np.clip(np.floor(box[:, 1].min()).astype(np.int32), 0, h - 1)
+        y_max = np.clip(np.ceil(box[:, 1].max()).astype(np.int32), 0, h - 1)
 
         mask = np.zeros((y_max - y_min + 1, x_max - x_min + 1), dtype=np.uint8)
         box[:, 0] = box[:, 0] - x_min
         box[:, 1] = box[:, 1] - y_min
-        cv2.fillPoly(mask, box.reshape(1, -1, 2).astype("int32"), 1)
+        cv2.fillPoly(mask, box.reshape(1, -1, 2).astype(np.int32), 1)
         return cv2.mean(bitmap[y_min:y_max + 1, x_min:x_max + 1], mask)[0]

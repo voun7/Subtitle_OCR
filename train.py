@@ -19,9 +19,9 @@ logger = logging.getLogger(__name__)
 
 def train_text_detection(lang: Types.Language) -> None:
     # Setup hyperparameters
-    num_epochs = 5
-    batch_size, val_batch_size = 16, 32
-    learning_rate = 0.005
+    num_epochs = 50
+    batch_size, val_batch_size = 16, 1
+    learning_rate = 0.001
     num_workers = 10
     model_name, backbone = Types.db, "deformable_resnet50"
 
@@ -41,13 +41,14 @@ def train_text_detection(lang: Types.Language) -> None:
         "optimizer": optimizer,
         "sanity_check": False,
         "lr_scheduler": lr_scheduler,
-        "model_dir": "saved models/detection models",
+        "num_epochs": num_epochs,
+        "model_dir": "saved models/det models",
         "model_filename": f"{model_name} {backbone}",
     }
     trainer = ModelTrainer(model, train_params)
     trainer.set_loaders(train_ds, val_ds, batch_size, val_batch_size, num_workers)
-    # trainer.load_checkpoint("")
-    trainer.train(num_epochs)
+    trainer.load_checkpoint("")
+    trainer.train()
 
 
 def train_text_recognition(lang: Types.Language) -> None:
@@ -73,26 +74,27 @@ def train_text_recognition(lang: Types.Language) -> None:
         "optimizer": optimizer,
         "sanity_check": True,
         "lr_scheduler": lr_scheduler,
-        "model_dir": "saved models/recognition models",
+        "num_epochs": num_epochs,
+        "model_dir": "saved models/rec models",
         "model_filename": f"{model_name} {backbone}",
     }
     trainer = ModelTrainer(model, train_params)
     trainer.set_loaders(train_ds, val_ds, batch_size, val_batch_size, num_workers)
-    # trainer.load_checkpoint("")
-    trainer.train(num_epochs)
+    trainer.load_checkpoint("")
+    trainer.train()
 
 
 def main() -> None:
     lang = Types.english
-    # tb = TelegramBot()
+    tb = TelegramBot()
 
     try:
         train_text_detection(lang)
-        # tb.send_telegram_message("Text Detection Model Training Done!")
+        tb.send_telegram_message("Text Detection Model Training Done!")
     except Exception as error:
         error_msg = f"During Text Detection training an error occurred:\n{error}"
         logger.exception(f"\n{error_msg}")
-        # tb.send_telegram_message(error_msg)
+        tb.send_telegram_message(error_msg)
 
     # try:
     #     train_text_recognition(lang)

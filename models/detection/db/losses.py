@@ -9,7 +9,7 @@ class OHEMBalanceCrossEntropyLoss(nn.Module):
     improving the training effect of the model.
     """
 
-    def __init__(self, negative_ratio: int = 3, eps: float = 1e-6, reduction: str = 'mean') -> None:
+    def __init__(self, negative_ratio: int = 3, eps: float = 1e-6, reduction: str = 'none') -> None:
         super().__init__()
         self.negative_ratio = negative_ratio
         self.eps = eps
@@ -76,7 +76,7 @@ class MaskL1Loss(nn.Module):
     MaskL1 Loss is to calculate the 𝐿1 distance between the predicted text threshold map and the label.
     """
 
-    def __init__(self, eps: float = 1e-6, reduction: str = 'mean') -> None:
+    def __init__(self, eps: float = 1e-6) -> None:
         super().__init__()
         self.eps = eps
 
@@ -92,21 +92,21 @@ class DBLoss(nn.Module):
      these three maps and their real labels to build three parts of the loss function respectively.
     """
 
-    def __init__(self, alpha: float = 1.0, beta: int = 10, ohem_ratio: int = 3, reduction: str = 'mean',
-                 eps: float = 1e-6) -> None:
+    def __init__(self, alpha: float = 1.0, beta: int = 10, ohem_ratio: int = 3, eps: float = 1e-6) -> None:
         super().__init__()
         self.alpha = alpha
         self.beta = beta
         # Declare different loss functions
         self.dice_loss = DiceLoss(eps)
-        self.l1_loss = MaskL1Loss(eps, reduction)
-        self.bce_loss = OHEMBalanceCrossEntropyLoss(ohem_ratio, eps, reduction)
+        self.l1_loss = MaskL1Loss(eps)
+        self.bce_loss = OHEMBalanceCrossEntropyLoss(ohem_ratio, eps)
 
     def forward(self, predictions: torch.Tensor, batch: dict) -> dict:
         """
         :params: predictions (train mode): prob map, thresh map, binary map
         :params: gts (eval mode): prob map, thresh map
         """
+        assert predictions.dim() == 4
         shrink_maps = predictions[:, 0, :, :]
         threshold_maps = predictions[:, 1, :, :]
         binary_maps = None

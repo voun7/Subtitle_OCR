@@ -6,7 +6,7 @@ import torch
 from imgaug.augmentables import Keypoint, KeypointsOnImage
 from shapely.geometry import Polygon
 
-from utilities.utils import Types
+from utilities.utils import Types, read_image
 
 np.seterr(divide='ignore', invalid='ignore')
 
@@ -196,9 +196,7 @@ def db_collate_fn(batch: list) -> dict:
 
 
 def db_preprocess(image_path: str, anns: list, data_type: Types.DataType, image_size: int = 640) -> dict:
-    image = cv.imread(image_path)
-    image_height, image_width, _ = image.shape
-    bboxes = [ann["bbox"] for ann in anns]
+    image = read_image(image_path)[0]
     if data_type == Types.train:
         image, anns = data_augmentation(image, anns)
         # image, anns = random_crop(image, anns)
@@ -210,8 +208,8 @@ def db_preprocess(image_path: str, anns: list, data_type: Types.DataType, image_
     data = {
         "image_path": image_path,
         "image": image,
-        "shape": [image_height, image_width],
-        "bbox": bboxes,
+        "shape": [image_size, image_size],
+        "bbox": [ann["bbox"] for ann in anns],
         "shrink_map": gt,
         "shrink_mask": mask,
         "threshold_map": thresh_map,
