@@ -316,15 +316,15 @@ def load_data(lang: Types.Language, model_type: Types.ModelType, data_type: Type
         if model_type == Types.det:
             return merge_data_sources(
                 ICDAR2015Data(data_type),
-                # SynthTextData(data_type),
-                # TextOCR01Data(data_type),
+                SynthTextData(data_type),
+                TextOCR01Data(data_type),
             )
         elif model_type == Types.rec:
             return merge_data_sources(
                 ICDAR2015Data(data_type),
-                SynthTextData(data_type),
-                TextOCR01Data(data_type),
-                TRDGSyntheticData(lang, data_type)
+                # SynthTextData(data_type),
+                # TextOCR01Data(data_type),
+                # TRDGSyntheticData(lang, data_type)
             )
     elif lang == Types.chinese:
         if model_type == Types.det:
@@ -345,7 +345,7 @@ def load_data(lang: Types.Language, model_type: Types.ModelType, data_type: Type
 if __name__ == '__main__':
     start = perf_counter()
 
-    ts_data = load_data(Types.english, Types.det, Types.train)
+    ts_data = load_data(Types.english, Types.rec, Types.train)
     ts_keys = list(ts_data.keys())
     ts_len = len(ts_keys)
     print(f"Data Source Length: {ts_len:,} Data Load Time: {perf_counter() - start:.4f}\n")

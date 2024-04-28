@@ -9,7 +9,8 @@ from utilities.visualize import visualize_data
 
 
 class SubtitleOCR:
-    db_model_file = r"C:\Users\Victor\Downloads\db_resnet18.pth"
+    models_dir = r"C:\Users\Victor\OneDrive\Backups\Subtitle OCR Models"
+    db_model_file = f"{models_dir}/DB deformable_resnet50 (0.449).pt"
     db_pp_model_file = r""
     crnn_model_file = r""
 
@@ -24,7 +25,7 @@ class SubtitleOCR:
     def init_model(self, model: Types.ModelName):
         state = None
         if model is Types.db:
-            model = DB({"name": Types.db, "backbone": "resnet18", "pretrained": True})
+            model = DB({"name": Types.db, "backbone": "deformable_resnet50", "pretrained": True})
             state = torch.load(self.db_model_file)
         elif model is Types.crnn:
             model = CRNN({"": ""})
