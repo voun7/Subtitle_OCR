@@ -41,8 +41,8 @@ class ModelTrainer:
 
         self.writer = SummaryWriter()
 
-        # These attributes are going to be computed internally
-        self.losses, self.val_losses = {}, {}
+        # These attributes are going to be computed internally, initialize the best loss to a large value
+        self.losses, self.val_losses, self.best_loss = {}, {}, float("inf")
         self.total_epochs, self.epoch_stop = 0, self.num_epochs
 
         # Creates the train_step function for our model, loss function and optimizer
@@ -206,8 +206,7 @@ class ModelTrainer:
         assert self.train_loader and self.val_loader
         self.set_seed(seed)  # To ensure reproducibility of the training process
         start_time = perf_counter()
-        # initialize the best loss to a large value
-        best_loss, best_model_wts = float('inf'), deepcopy(self.model.state_dict())
+        best_model_wts = deepcopy(self.model.state_dict())  # Initial copy of model weights is saved
 
         for _ in range(self.epoch_stop):
             # Performs training using mini-batches
@@ -222,9 +221,9 @@ class ModelTrainer:
                 self.append_dict_val(val_loss, self.val_losses)
 
             # store best model
-            if val_loss["loss"] < best_loss:
-                best_loss, best_model_wts = val_loss["loss"], deepcopy(self.model.state_dict())
-                self.save_checkpoint(best_loss)  # store weights into a local file
+            if val_loss["loss"] < self.best_loss:
+                self.best_loss, best_model_wts = val_loss["loss"], deepcopy(self.model.state_dict())
+                self.save_checkpoint()  # store weights into a local file
                 self.clear_previous_print()
                 logger.info("Saving best model weights!")
 
@@ -240,7 +239,7 @@ class ModelTrainer:
 
         self.writer.close()  # Closes the writer
 
-        self.save_model(best_loss)
+        self.save_model()
         total_time = timedelta(seconds=round(perf_counter() - start_time))
         logger.info(f"Model Training Completed & Model Saved! Total Time: {total_time}")
         logger.debug(f"{self.losses = }, \n{self.val_losses = }")
@@ -266,7 +265,7 @@ class ModelTrainer:
             self.writer.add_scalars("training metric", metric, self.total_epochs)
             self.writer.add_scalars("validation metric", val_metric, self.total_epochs)
 
-    def save_checkpoint(self, best_loss: float) -> None:
+    def save_checkpoint(self) -> None:
         """
         Builds dictionary with all elements for resuming training.
         """
@@ -275,13 +274,14 @@ class ModelTrainer:
             'model_state_dict': self.model.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),
             'loss': self.losses,
-            'val_loss': self.val_losses
+            'val_loss': self.val_losses,
+            'best_loss': self.best_loss
         }
-        torch.save(checkpoint, self.model_dir.joinpath(f"{self.model_filename} (checkpoint) ({best_loss}).pt"))
+        torch.save(checkpoint, self.model_dir.joinpath(f"{self.model_filename} (checkpoint) ({self.best_loss}).pt"))
 
     def load_checkpoint(self, model_checkpoint_file: str) -> None:
         if not model_checkpoint_file or not Path(model_checkpoint_file).exists():
-            logger.warning(f"Checkpoint not loaded! Checkpoint File {model_checkpoint_file} does not exist.")
+            logger.warning(f"Checkpoint Not Loaded! Checkpoint File {model_checkpoint_file} Does Not Exist.")
             return
         # Loads dictionary
         checkpoint = torch.load(model_checkpoint_file)
@@ -292,11 +292,12 @@ class ModelTrainer:
         self.total_epochs = checkpoint['epoch']
         self.losses = checkpoint['loss']
         self.val_losses = checkpoint['val_loss']
+        self.best_loss = checkpoint['best_loss']
         self.num_epochs += self.total_epochs  # update the overall number of epochs
         logger.info(f"Model Checkpoint Loaded: Model Params No: {len([k for k, _ in self.model.named_parameters()])},\n"
-                    f"Optimizer: {self.optimizer},\n Total Epochs: {self.total_epochs}, \n"
+                    f"Optimizer: {self.optimizer},\nTotal Epochs: {self.total_epochs}, Best Loss: {self.best_loss}\n"
                     f"Loss Keys: {[k for k in self.losses]},\nVal Loss Keys: {[k for k in self.val_losses]}.")
 
-    def save_model(self, best_loss: float) -> None:
-        model_name = self.model_dir.joinpath(f"{self.model_filename} ({best_loss}).pt")
+    def save_model(self) -> None:
+        model_name = self.model_dir.joinpath(f"{self.model_filename} ({self.best_loss}).pt")
         torch.save(self.model.state_dict(), model_name)

@@ -9,26 +9,26 @@ from models.detection.db.seg_body import FPN, ASFBlock
 from models.detection.db.seg_head import DBHead
 from utilities.utils import Types
 
-BACKBONES = {
-    'resnet18': {'models': resnet18, 'out': [64, 128, 256, 512]},
-    'resnet34': {'models': resnet34, 'out': [64, 128, 256, 512]},
-    'resnet50': {'models': resnet50, 'out': [256, 512, 1024, 2048]},
-    'resnet101': {'models': resnet101, 'out': [256, 512, 1024, 2048]},
-    'resnet152': {'models': resnet152, 'out': [256, 512, 1024, 2048]},
-    'deformable_resnet18': {'models': deformable_resnet18, 'out': [64, 128, 256, 512]},
-    'deformable_resnet50': {'models': deformable_resnet50, 'out': [256, 512, 1024, 2048]},
-    'mobilenet_v3_small': {'models': mobilenet_v3_small, 'out': [16, 24, 48, 96]},
-    'mobilenet_v3_large': {'models': mobilenet_v3_large, 'out': [24, 40, 160, 160]},
-}
-
 
 class DB(nn.Module):
+    backbones = {
+        'resnet18': {'models': resnet18, 'out': [64, 128, 256, 512]},
+        'resnet34': {'models': resnet34, 'out': [64, 128, 256, 512]},
+        'resnet50': {'models': resnet50, 'out': [256, 512, 1024, 2048]},
+        'resnet101': {'models': resnet101, 'out': [256, 512, 1024, 2048]},
+        'resnet152': {'models': resnet152, 'out': [256, 512, 1024, 2048]},
+        'deformable_resnet18': {'models': deformable_resnet18, 'out': [64, 128, 256, 512]},
+        'deformable_resnet50': {'models': deformable_resnet50, 'out': [256, 512, 1024, 2048]},
+        'mobilenet_v3_small': {'models': mobilenet_v3_small, 'out': [16, 24, 48, 96]},
+        'mobilenet_v3_large': {'models': mobilenet_v3_large, 'out': [24, 40, 160, 160]},
+    }
+
     def __init__(self, params):
         super().__init__()
         backbone = params['backbone']
         pretrained = params['pretrained']
 
-        backbone, backbone_out = BACKBONES[backbone]["models"], BACKBONES[backbone]["out"]
+        backbone, backbone_out = self.backbones[backbone]["models"], self.backbones[backbone]["out"]
         self.backbone = backbone(pretrained=pretrained)
 
         if params['name'] == Types.db:
