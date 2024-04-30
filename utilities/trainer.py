@@ -224,22 +224,20 @@ class ModelTrainer:
                 if self.metrics_fn:
                     self.append_dict_val(val_metric, self.val_metrics)
 
+            self.total_epochs += 1  # Keeps track of the total numbers of epochs
+            self.record_values(loss, val_loss, metric, val_metric)
             # store best model
             if val_loss["loss"] < self.best_loss:
                 self.best_loss, best_model_wts = val_loss["loss"], deepcopy(self.model.state_dict())
-                self.save_checkpoint()  # store weights into a local file
                 self.clear_previous_print()
                 logger.info("Saving best model weights!")
-
+                self.save_checkpoint()
             # learning rate schedule
             self.lr_scheduler.step(val_loss["loss"])
             if current_lr != self.lr_scheduler.get_last_lr()[0]:
                 self.clear_previous_print()
                 logger.info("Learning rate changed. Loading best model weights!")
                 self.model.load_state_dict(best_model_wts)
-
-            self.total_epochs += 1  # Keeps track of the total numbers of epochs
-            self.record_values(loss, val_loss, metric, val_metric)
 
         self.writer.close()  # Closes the writer
         self.save_model()
@@ -257,18 +255,18 @@ class ModelTrainer:
             more_val_metric = self.metrics_fn.gather_val_metrics()
             val_metric.update(more_val_metric)
             self.append_dict_val(more_val_metric, self.val_metrics)
-        metric_txt = f"\nTraining Metric: {metric}, Validation Metric: {val_metric}, \n" if self.metrics_fn else ""
-        logger.info(f"Epoch: {self.total_epochs}/{self.num_epochs}, Current lr={current_lr}, {metric_txt}"
+        metric_txt = f"\nTraining Metric: {metric}, Validation Metric: {val_metric},\n" if self.metrics_fn else ""
+        logger.info(f"Epoch: {self.total_epochs}/{self.num_epochs}, Current lr={current_lr},{metric_txt}"
                     f"Training Loss: {loss}, Validation Loss: {val_loss}")
 
         # Records the values for each epoch on the writer
-        self.writer.add_scalar("learning rate", current_lr, self.total_epochs)
-        self.writer.add_scalars("training loss", loss, self.total_epochs)
-        self.writer.add_scalars("validation loss", val_loss, self.total_epochs)
+        self.writer.add_scalar("Learning Rate", current_lr, self.total_epochs)
+        self.writer.add_scalars("Training Loss", loss, self.total_epochs)
+        self.writer.add_scalars("Validation Loss", val_loss, self.total_epochs)
         if self.metrics_fn:
             # For validation metrics that are generated per epoch instead of per batch
-            self.writer.add_scalars("training metric", metric, self.total_epochs)
-            self.writer.add_scalars("validation metric", val_metric, self.total_epochs)
+            self.writer.add_scalars("Training Metric", metric, self.total_epochs)
+            self.writer.add_scalars("Validation Metric", val_metric, self.total_epochs)
 
     def save_checkpoint(self) -> None:
         """
@@ -308,3 +306,23 @@ class ModelTrainer:
     def save_model(self) -> None:
         model_name = self.model_dir.joinpath(f"{self.model_filename} ({self.best_loss}).pt")
         torch.save(self.model.state_dict(), model_name)
+
+
+def plot_checkpoint(model_checkpoint_file: str) -> None:
+    """
+    Use data from model checkpoint to plot the data recorded during training.
+    """
+    writer, checkpoint = SummaryWriter(comment="checkpoint_plt"), torch.load(model_checkpoint_file)
+
+    total_epochs = checkpoint['epoch']
+    losses, val_losses, best_loss = checkpoint['loss'], checkpoint['val_loss'], checkpoint.get('best_loss')
+    metrics, val_metrics = checkpoint.get('metrics'), checkpoint.get('val_metrics')
+    if metrics and val_metrics:
+        losses.update(metrics), val_losses.update(val_metrics)
+    train_keys, val_keys = [k for k in losses], [k for k in val_losses]
+    logger.info(f"Plotting Loaded Model Checkpoint: \tTotal Epochs: {total_epochs}, Best Loss: {best_loss}\n"
+                f"Training Keys: {train_keys},\nValidation Keys: {val_keys}")
+
+    for idx in range(total_epochs):
+        writer.add_scalars("Training Values", {k: losses[k][idx] for k in train_keys}, idx)
+        writer.add_scalars("Validation Values", {k: val_losses[k][idx] for k in val_keys}, idx)
