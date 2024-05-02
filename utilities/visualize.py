@@ -53,17 +53,21 @@ def visualize_dataset(dataset, num: int = 10) -> None:
                 visualize_np_image(val, key)
 
 
-def visualize_data(image: str, labels: list, put_text: bool = False) -> None:
+def visualize_data(image: str, labels: list, crop_bbox: bool = True, put_text: bool = False) -> None:
     image = cv.imread(image)  # Load the image
     if scale := get_scale_factor(image):
         image = rescale(scale, image)
 
     for label in labels:
         bbox, text = label["bbox"], label["text"]
-        if bbox := tuple(flatten_iter(bbox)):
+        if bbox:
+            bbox = tuple(flatten_iter(bbox))
             bbox = rescale(scale, bbox=bbox) if scale else bbox
             x_min, y_min, x_max, y_max = map(int, pascal_voc_bb(bbox))  # Change type to int and change bbox format
-            cv.rectangle(image, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)  # Draw the bbox on the image
+            if crop_bbox and len(labels) == 1:
+                image = image[y_min:y_max, x_min:x_max]
+            else:
+                cv.rectangle(image, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)  # Draw the bbox on the image
             if text and put_text:
                 cv.putText(image, text, (x_max, y_max), cv.FONT_HERSHEY_PLAIN, 2, (0, 255, 0), 2)
 

@@ -27,7 +27,7 @@ def train_text_detection(lang: Types.Language) -> None:
     logger.info("Loading Text Detection Data...")
     train_ds = TextDetectionDataset(lang, Types.train, model_name)
     val_ds = TextDetectionDataset(lang, Types.val, model_name)
-    logger.info(f"Loading Completed... Dataset size Train: {len(train_ds):,}, Val: {len(val_ds):,}")
+    logger.info(f"Loading Completed... Dataset Size Train: {len(train_ds):,}, Val: {len(val_ds):,}")
     # visualize_dataset(train_ds)
 
     model_params = {"name": model_name, "backbone": backbone, "pretrained": True}
@@ -61,7 +61,7 @@ def train_text_recognition(lang: Types.Language) -> None:
     logger.info("Loading Text Recognition Data...")
     train_ds = TextRecognitionDataset(lang, Types.train, model_name)
     val_ds = TextRecognitionDataset(lang, Types.val, model_name)
-    logger.info("Loading Completed...")
+    logger.info(f"Loading Completed... Dataset Size Train: {len(train_ds):,}, Val: {len(val_ds):,}")
     # visualize_dataset(train_ds)
 
     model_params = {"initial_filters": 8, "num_fc1": 100, "dropout_rate": 0.25}
