@@ -21,31 +21,23 @@ class ModelTrainer:
         The losses from the loss function should be a dictionary.
         The trainer supports optional use of metrics that should be a dictionary.
         """
-        # Here we define the attributes of our class
         self.use_cuda = torch.cuda.is_available()
         self.device = 'cuda' if self.use_cuda else 'cpu'
-        # We start by storing the arguments as attributes to use them later
         self.model = self.init_model(model)
-        self.loss_fn = params["loss_fn"]
-        self.metrics_fn = params.get("metrics")
-        self.optimizer = params["optimizer"]
+        self.loss_fn, self.metrics_fn, self.optimizer = params["loss_fn"], params.get("metrics"), params["optimizer"]
+        self.lr_scheduler, self.num_epochs = params["lr_scheduler"], params["num_epochs"]
         self.sanity_check = params["sanity_check"]
-        self.lr_scheduler = params["lr_scheduler"]
-        self.num_epochs = params["num_epochs"]
-        self.model_dir = Path(params["model_dir"])
-        self.model_filename = Path(params["model_filename"])
+        self.model_dir, self.model_filename = Path(params["model_dir"]), Path(params["model_filename"])
         self.model_dir.mkdir(parents=True, exist_ok=True)
 
         # These attributes are defined here, but since they are not needed at the moment of creation, we keep them None
         self.writer = self.train_loader = self.val_loader = None
-
         # These attributes are going to be computed internally, initialize the best loss to a large value
         self.losses, self.val_losses, self.best_loss = {}, {}, float("inf")
         self.metrics, self.val_metrics = {}, {}
         self.total_epochs, self.epoch_stop = 0, self.num_epochs
 
         # Creates the train_step function for our model, loss function and optimizer
-        # Note: there are NO ARGS there! It makes use of the class attributes directly
         self.train_step_fn = self._make_train_step_fn()
         # Creates the val_step function for our model and loss
         self.val_step_fn = self._make_val_step_fn()
@@ -240,7 +232,7 @@ class ModelTrainer:
                 self.model.load_state_dict(best_model_wts)
 
         self.writer.close()  # Closes the writer
-        self.save_model()
+        self.save_model(val_loss["loss"])
         total_time = timedelta(seconds=round(perf_counter() - start_time))
         logger.info(f"Model Training Completed & Model Saved! Total Time: {total_time}")
         logger.debug(f"{self.losses = },\n{self.val_losses = },\n{self.metrics = }, \n{self.val_metrics = }")
@@ -303,8 +295,15 @@ class ModelTrainer:
                     f"Optimizer: {self.optimizer},\nTotal Epochs: {self.total_epochs}, Best Loss: {self.best_loss}\n"
                     f"Loss Keys: {[k for k in self.losses]},\nVal Loss Keys: {[k for k in self.val_losses]}{met_p}")
 
-    def save_model(self) -> None:
-        model_name = self.model_dir.joinpath(f"{self.model_filename} ({self.best_loss}).pt")
+    def save_model(self, last_val_loss: float = None) -> None:
+        """
+        Save the model state and checkpoint from the last epoch.
+        :param last_val_loss: Value of validation loss in the last epoch.
+        """
+        if last_val_loss:
+            self.save_checkpoint()
+        val_loss = f" ({last_val_loss})" if last_val_loss else ""
+        model_name = self.model_dir.joinpath(f"{self.model_filename}{val_loss}.pt")
         torch.save(self.model.state_dict(), model_name)
 
 

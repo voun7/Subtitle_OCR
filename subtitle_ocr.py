@@ -1,16 +1,15 @@
-import cv2 as cv
 import numpy as np
 import torch
 
 from models.detection.db import DB, DBPostProcess
 from models.recognition.crnn import CRNN
-from utilities.utils import Types, read_image
+from utilities.utils import Types, read_image, resize_norm_img
 from utilities.visualize import visualize_data
 
 
 class SubtitleOCR:
     models_dir = r"C:\Users\Victor\OneDrive\Backups\Subtitle OCR Models"
-    db_model_file = f"{models_dir}/DB deformable_resnet50 (0.449).pt"
+    db_model_file = f"{models_dir}/DB deformable_resnet50 (0.448).pt"
     db_pp_model_file = r""
     crnn_model_file = r""
 
@@ -36,39 +35,14 @@ class SubtitleOCR:
         model.eval()
         return model
 
-    @staticmethod
-    def resize_image(img, size=640, pad=False):
-        h, w, c = img.shape
-        scale_w = size / w
-        scale_h = size / h
-        scale = min(scale_w, scale_h)
-        h = int(h * scale)
-        w = int(w * scale)
-        if pad:
-            new_img = np.zeros((size, size, c), img.dtype)
-            new_img[:h, :w] = cv.resize(img, (w, h))
-        else:
-            new_img = cv.resize(img, (w, h))
-        return new_img
-
-    @staticmethod
-    def normalize_image(image, mean=(103.939, 116.779, 123.68)):
-        image = image.astype(np.float32)
-        image[..., 0] -= mean[0]
-        image[..., 1] -= mean[1]
-        image[..., 2] -= mean[2]
+    def preprocess_image(self, image: np.ndarray, pad: bool = False) -> torch.Tensor:
+        image = resize_norm_img(image, 640, 640, pad)[0]
         image = np.expand_dims(image, axis=0)
-        return image
-
-    def preprocess_image(self, image, to_tensor=True, pad=False):
-        image = self.resize_image(image, size=640, pad=pad)
-        image = self.normalize_image(image)
-        if to_tensor:
-            image = torch.from_numpy(image.transpose(0, 3, 1, 2)).to(self.device)
+        image = torch.from_numpy(image).to(self.device)
         return image
 
     @torch.no_grad()
-    def ocr(self, image_path):
+    def ocr(self, image_path: str) -> list:
         image, image_height, image_width = read_image(image_path)
         image = self.preprocess_image(image)
         prediction = self.det_model(image)
@@ -78,7 +52,7 @@ class SubtitleOCR:
         return labels
 
 
-def test_main():
+def test_main() -> None:
     test_sub_ocr = SubtitleOCR()
     test_image_file = r"C:\Users\Victor\Documents\Python Datasets\Subtitle_OCR\ICDAR 2015\train\images\img_56.jpg"
     test_output = test_sub_ocr.ocr(test_image_file)

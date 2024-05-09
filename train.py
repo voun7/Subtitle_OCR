@@ -35,12 +35,9 @@ def train_text_detection(lang: Types.Language) -> None:
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     lr_scheduler = ReduceLROnPlateau(optimizer)
     train_params = {
-        "loss_fn": DBLoss(),
-        "metrics": DBMetrics(),
-        "optimizer": optimizer,
-        "sanity_check": False,
-        "lr_scheduler": lr_scheduler,
+        "loss_fn": DBLoss(), "metrics": DBMetrics(), "optimizer": optimizer, "lr_scheduler": lr_scheduler,
         "num_epochs": num_epochs,
+        "sanity_check": False,
         "model_dir": "saved models/det models",
         "model_filename": f"{model_name} {backbone}",
     }
@@ -87,23 +84,23 @@ def train_text_recognition(lang: Types.Language) -> None:
 
 def main() -> None:
     lang = Types.english
-    # tb = TelegramBot()
-
-    # try:
-    #     train_text_detection(lang)
-    #     tb.send_telegram_message("Text Detection Model Training Done!")
-    # except Exception as error:
-    #     error_msg = f"During Text Detection training an error occurred:\n{error}"
-    #     logger.exception(f"\n{error_msg}")
-    #     tb.send_telegram_message(error_msg)
+    tb = TelegramBot()
 
     try:
-        train_text_recognition(lang)
-        # tb.send_telegram_message("Text Recognition Model Training Done!")
+        train_text_detection(lang)
+        tb.send_telegram_message("Text Detection Model Training Done!")
     except Exception as error:
-        error_msg = f"During Text Recognition training an error occurred:\n{error}"
+        error_msg = f"During Text Detection training an error occurred:\n{error}"
         logger.exception(f"\n{error_msg}")
-        # tb.send_telegram_message(error_msg)
+        tb.send_telegram_message(error_msg)
+
+    # try:
+    #     train_text_recognition(lang)
+    #     # tb.send_telegram_message("Text Recognition Model Training Done!")
+    # except Exception as error:
+    #     error_msg = f"During Text Recognition training an error occurred:\n{error}"
+    #     logger.exception(f"\n{error_msg}")
+    #     # tb.send_telegram_message(error_msg)
 
 
 if __name__ == '__main__':
