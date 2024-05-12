@@ -5,13 +5,15 @@ from torch.utils.data import Dataset
 
 from data.load_data import load_data
 from models.detection.db.pre_process import db_preprocess, db_collate_fn
-from utilities.utils import Types, read_image, resize_norm_img, flatten_iter, pascal_voc_bb
+from utilities.utils import Types, read_image, resize_norm_img, rescale, flatten_iter, pairwise_tuples, pascal_voc_bb
 
 
 class TextDetectionDataset(Dataset):
-    def __init__(self, lang: Types.Language, data_type: Types.DataType, model_name: Types.ModelName) -> None:
+    def __init__(self, lang: Types.Language, data_type: Types.DataType, model_name: Types.ModelName, image_height: int,
+                 image_width: int) -> None:
         self.img_data = load_data(lang, Types.det, data_type)
         self.data_type, self.model_name, self.transform = data_type, model_name, self.augmentations()
+        self.image_height, self.image_width = image_height, image_width
 
     @staticmethod
     def augmentations() -> iaa.meta.Sequential:
@@ -44,8 +46,11 @@ class TextDetectionDataset(Dataset):
         image = read_image(str(image_path))[0]
         if self.data_type == Types.train:
             image, image_labels = self.data_augmentation(image, image_labels)
+        image, scale = resize_norm_img(image, self.image_height, self.image_width)
+        image_labels = [{"bbox": pairwise_tuples(rescale(scale, bbox=tuple(flatten_iter(label["bbox"]))))} for label in
+                        image_labels]
         if self.model_name == Types.db:
-            return db_preprocess(image_path, image, image_labels, 640, 640)
+            return db_preprocess(image_path, image, image_labels, self.image_height, self.image_width)
 
     def collate_fn(self, batch: list) -> dict:
         if self.model_name == Types.db:
@@ -53,11 +58,11 @@ class TextDetectionDataset(Dataset):
 
 
 class TextRecognitionDataset(Dataset):
-    def __init__(self, lang: Types.Language, data_type: Types.DataType, model_name: Types.ModelName) -> None:
+    def __init__(self, lang: Types.Language, data_type: Types.DataType, model_name: Types.ModelName, image_height: int,
+                 image_width: int) -> None:
         self.img_data = load_data(lang, Types.rec, data_type)
-        self.data_type, self.transform = data_type, self.augmentations()
-        if model_name == Types.crnn:
-            self.image_height, self.image_width = 32, 320
+        self.data_type, self.model_name, self.transform = data_type, model_name, self.augmentations()
+        self.image_height, self.image_width = image_height, image_width
 
     @staticmethod
     def augmentations() -> iaa.meta.Sequential:
@@ -72,9 +77,11 @@ class TextRecognitionDataset(Dataset):
 
     def __getitem__(self, idx: int) -> dict:
         image_path, image_labels = self.img_data[idx]
-        bbox = tuple(flatten_iter(image_labels[0]["bbox"]))
-        x_min, y_min, x_max, y_max = map(int, pascal_voc_bb(bbox))
-        image = read_image(str(image_path))[0][y_min:y_max, x_min:x_max]  # Use bbox to crop a specific text from image.
+        if bbox := image_labels[0]["bbox"]:
+            x_min, y_min, x_max, y_max = map(int, pascal_voc_bb(tuple(flatten_iter(bbox))))
+            image = read_image(str(image_path))[0][y_min:y_max, x_min:x_max]  # crop image with bbox.
+        else:
+            image = read_image(str(image_path))[0]
         if self.data_type == Types.train:
             image = self.transform.augment_image(image)
         image = resize_norm_img(image, self.image_height, self.image_width)[0]

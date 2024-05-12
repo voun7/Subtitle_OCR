@@ -196,7 +196,7 @@ class ModelTrainer:
     def train(self, seed: int = 42) -> None:
         assert self.train_loader and self.val_loader
         self.set_seed(seed)  # To ensure reproducibility of the training process
-        start_time, self.writer, best_acc = perf_counter(), SummaryWriter(), 0
+        start_time, self.writer = perf_counter(), SummaryWriter()
         best_model_wts = deepcopy(self.model.state_dict())  # Initial copy of model weights is saved
 
         for _ in range(self.epoch_stop):
@@ -219,8 +219,8 @@ class ModelTrainer:
             self.total_epochs += 1  # Keeps track of the total numbers of epochs
             self.record_values(loss, val_loss, metric, val_metric)
             # store best model
-            if val_loss["loss"] < self.best_loss or val_metric.get("accuracy") and val_metric["accuracy"] > best_acc:
-                self.best_loss, best_model_wts, best_acc = val_loss["loss"], deepcopy(self.model.state_dict()), best_acc
+            if val_loss["loss"] < self.best_loss:
+                self.best_loss, best_model_wts = val_loss["loss"], deepcopy(self.model.state_dict())
                 self.clear_previous_print()
                 logger.info("Saving best model weights!")
                 self.save_checkpoint()

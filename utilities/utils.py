@@ -10,8 +10,8 @@ class Types:
     DataType = NewType('DataType', str)
     Language = NewType('Language', str)
 
-    det = ModelType("detection")
-    rec = ModelType("recognition")
+    det = ModelType("Detection")
+    rec = ModelType("Recognition")
 
     db = ModelName("DB")
     db_pp = ModelName("DB++")

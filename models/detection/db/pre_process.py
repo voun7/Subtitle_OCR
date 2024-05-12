@@ -4,8 +4,6 @@ import pyclipper
 import torch
 from shapely.geometry import Polygon
 
-from utilities.utils import resize_norm_img, rescale, flatten_iter, pairwise_tuples
-
 np.seterr(divide='ignore', invalid='ignore')
 
 
@@ -141,8 +139,6 @@ def db_collate_fn(batch: list) -> dict:
 
 
 def db_preprocess(image_path: str, image: np.ndarray, anns: list, image_height: int, image_width: int) -> dict:
-    image, scale = resize_norm_img(image, image_height, image_width)
-    anns = [{"bbox": pairwise_tuples(rescale(scale, bbox=tuple(flatten_iter(ann["bbox"]))))} for ann in anns]
     gen_maps = MakeBorderAndShrinkMap(image_height, image_width)
     gt, mask, thresh_map, thresh_mask = gen_maps.get_maps(anns)
     data = {

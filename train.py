@@ -10,8 +10,7 @@ from utilities.logger_setup import setup_logging
 from utilities.telegram_bot import TelegramBot
 from utilities.trainer import ModelTrainer
 from utilities.utils import Types
-
-# from utilities.visualize import visualize_dataset
+from utilities.visualize import visualize_dataset
 
 logger = logging.getLogger(__name__)
 
@@ -23,12 +22,13 @@ def train_text_detection(lang: Types.Language) -> None:
     learning_rate = 0.001
     num_workers = 10
     model_name, backbone = Types.db, "deformable_resnet50"
+    image_height, image_width = 640, 640
 
     logger.info("Loading Text Detection Data...")
-    train_ds = TextDetectionDataset(lang, Types.train, model_name)
-    val_ds = TextDetectionDataset(lang, Types.val, model_name)
+    train_ds = TextDetectionDataset(lang, Types.train, model_name, image_height, image_width)
+    val_ds = TextDetectionDataset(lang, Types.val, model_name, image_height, image_width)
     logger.info(f"Loading Completed... Dataset Size Train: {len(train_ds):,}, Val: {len(val_ds):,}")
-    # visualize_dataset(train_ds)
+    visualize_dataset(train_ds)
 
     model_params = {"name": model_name, "backbone": backbone, "pretrained": True}
     model = DB(model_params)
@@ -38,7 +38,7 @@ def train_text_detection(lang: Types.Language) -> None:
         "loss_fn": DBLoss(), "metrics_fn": DBMetrics(), "optimizer": optimizer, "lr_scheduler": lr_scheduler,
         "num_epochs": num_epochs,
         "sanity_check": False,
-        "model_dir": "saved models/det models", "model_filename": f"{model_name} {backbone}"
+        "model_dir": "saved models/det models", "model_filename": f"{lang} {model_name} {backbone}"
     }
     trainer = ModelTrainer(model, train_params)
     trainer.set_loaders(train_ds, val_ds, batch_size, val_batch_size, num_workers)
@@ -48,31 +48,32 @@ def train_text_detection(lang: Types.Language) -> None:
 
 def train_text_recognition(lang: Types.Language) -> None:
     # Setup hyperparameters
-    num_epochs = 50
+    num_epochs = 200
     batch_size, val_batch_size = 64, 256
     learning_rate = 0.0001
     num_workers = 10
-    model_name = Types.crnn
+    model_name, backbone = Types.crnn, "ctc"
+    image_height, image_width = 32, 160
 
     logger.info("Loading Text Recognition Data...")
-    train_ds = TextRecognitionDataset(lang, Types.train, model_name)
-    val_ds = TextRecognitionDataset(lang, Types.val, model_name)
+    train_ds = TextRecognitionDataset(lang, Types.train, model_name, image_height, image_width)
+    val_ds = TextRecognitionDataset(lang, Types.val, model_name, image_height, image_width)
     logger.info(f"Loading Completed... Dataset Size Train: {len(train_ds):,}, Val: {len(val_ds):,}")
-    # visualize_dataset(train_ds)
+    visualize_dataset(train_ds)
 
     with open(f"models/recognition/alphabets/{lang}.txt", encoding="utf-8") as file:
         alphabet = "".join([line.rstrip("\n") for line in file])
 
-    model_params = {"image_height": 32, "channel_size": 3, "num_class": len(alphabet), "hidden_size": 256}
+    model_params = {"image_height": image_height, "channel_size": 3, "num_class": len(alphabet) + 1}
     model = CRNN(**model_params)
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)  # RMSprop
     lr_scheduler = ReduceLROnPlateau(optimizer)
     train_params = {
         "loss_fn": CRNNLoss(alphabet), "metrics_fn": CRNNMetrics(alphabet), "optimizer": optimizer,
         "lr_scheduler": lr_scheduler,
         "num_epochs": num_epochs,
         "sanity_check": False,
-        "model_dir": "saved models/rec models", "model_filename": f"{model_name}"
+        "model_dir": "saved models/rec models", "model_filename": f"{lang} {model_name} {backbone}"
     }
     trainer = ModelTrainer(model, train_params)
     trainer.set_loaders(train_ds, val_ds, batch_size, val_batch_size, num_workers)
@@ -80,30 +81,24 @@ def train_text_recognition(lang: Types.Language) -> None:
     trainer.train()
 
 
-def main() -> None:
-    lang = Types.english
-    # tb = TelegramBot()
-
-    # try:
-    #     train_text_detection(lang)
-    #     tb.send_telegram_message("Text Detection Model Training Done!")
-    # except Exception as error:
-    #     error_msg = f"During Text Detection training an error occurred:\n{error}"
-    #     logger.exception(f"\n{error_msg}")
-    #     tb.send_telegram_message(error_msg)
-
+def main(lang: Types.Language, model_type: Types.ModelType) -> None:
+    tb = TelegramBot()
+    assert model_type in [Types.det, Types.rec], f"Model type must be either {Types.det} or {Types.rec}"
     try:
-        train_text_recognition(lang)
-        # tb.send_telegram_message("Text Recognition Model Training Done!")
+        if model_type == Types.det:
+            train_text_detection(lang)
+        else:
+            train_text_recognition(lang)
+        tb.send_telegram_message(f"Text {model_type} Model Training Done!")
     except Exception as error:
-        error_msg = f"During Text Recognition training an error occurred:\n{error}"
+        error_msg = f"During Text {model_type} training an error occurred:\n{error}"
         logger.exception(f"\n{error_msg}")
-        # tb.send_telegram_message(error_msg)
+        tb.send_telegram_message(error_msg)
 
 
 if __name__ == '__main__':
     setup_logging()
     TelegramBot.credential_file = "credentials/telegram auth.json"
     logger.debug("\n\nLogging Started")
-    main()
+    main(Types.english, Types.rec)
     logger.debug("Logging Ended\n\n")

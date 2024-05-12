@@ -21,7 +21,7 @@ class BidirectionalLSTM(nn.Module):
 
 class CRNN(nn.Module):
 
-    def __init__(self, image_height, channel_size, num_class, hidden_size, n_rnn=2, leaky_relu=False):
+    def __init__(self, image_height, channel_size, num_class, hidden_size=256, n_rnn=2, leaky_relu=False):
         """
         :param image_height: the height of the input image to network
         :param channel_size: the channel size of the input image

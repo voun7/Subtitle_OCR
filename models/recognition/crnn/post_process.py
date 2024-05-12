@@ -68,6 +68,19 @@ class StrLabelConverter:
             return texts
 
 
+class CRNNPostProcess:
+    def __init__(self, alphabet: str) -> None:
+        self.converter = StrLabelConverter(alphabet)
+
+    def __call__(self, predictions: torch.Tensor) -> tuple:
+        prediction_size = torch.LongTensor([predictions.size(0)] * predictions.size(1))
+        scores, predictions = predictions.max(2)
+        # todo: implement scores for predictions
+        predictions = predictions.transpose(1, 0).contiguous().view(-1)
+        predictions = self.converter.decode(predictions, prediction_size, False)
+        return predictions, scores
+
+
 if __name__ == '__main__':
     with open("../alphabets/en.txt") as file:
         test_alphabet = "".join([line.rstrip("\n") for line in file])

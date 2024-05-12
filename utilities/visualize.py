@@ -11,12 +11,12 @@ def get_scale_factor(img_frame: np.ndarray, img_target_height: int = 700) -> flo
         return rescale_factor
 
 
-def display_image(image: np.ndarray, win_name: str) -> None:
+def display_image(image: np.ndarray, win_name: str, display_time: int = 0) -> None:
     """
     Press any keyboard key to close image.
     """
     cv.imshow(win_name, image)
-    cv.waitKey()
+    cv.waitKey(int(display_time * 1000))
     cv.destroyAllWindows()
 
 
@@ -27,10 +27,11 @@ def visualize_np_image(image: np.ndarray, title: str = None) -> None:
     if scale := get_scale_factor(image):
         image = rescale(scale, image)
     title = f"{title} - " or ""
-    display_image(image, f"{title}Image Rescale Value: {round(scale, 4) if scale else scale}")
+    display_image(image, f"{title}Image Rescale Value: {round(scale, 4) if scale else scale}", 2)
 
 
-def visualize_dataset(dataset, num: int = 50) -> None:
+def visualize_dataset(dataset, num: int = 5) -> None:
+    print("Visualizing dataset...")
     ds_len = len(dataset)
     for _ in range(num):
         idx = np.random.randint(ds_len)
@@ -47,7 +48,7 @@ def visualize_data(image: str, labels: list, crop_bbox: bool = True, put_text: b
         image = rescale(scale, image)
 
     for label in labels:
-        bbox, text = label["bbox"], label["text"]
+        bbox, text = label.get("bbox"), label.get("text")
         if bbox:
             bbox = tuple(flatten_iter(bbox))
             bbox = rescale(scale, bbox=bbox) if scale else bbox
