@@ -1,7 +1,7 @@
 import cv2 as cv
 import numpy as np
 
-from utilities.utils import rescale, pascal_voc_bb, flatten_iter
+from utilities.utils import read_image, rescale, pascal_voc_bb, flatten_iter, crop_image
 
 
 def get_scale_factor(img_frame: np.ndarray, img_target_height: int = 700) -> float:
@@ -20,17 +20,17 @@ def display_image(image: np.ndarray, win_name: str, display_time: int = 0) -> No
     cv.destroyAllWindows()
 
 
-def visualize_np_image(image: np.ndarray, title: str = None) -> None:
+def visualize_np_image(image: np.ndarray, title: str, dsp_time: int) -> None:
     if len(image.shape) > 2 and image.shape[-1] > 3:
         image = np.moveaxis(image, 0, -1)  # change image data format from [C, H, W] to [H, W, C]
         image = cv.cvtColor(image, cv.COLOR_RGB2BGR)
     if scale := get_scale_factor(image):
         image = rescale(scale, image)
     title = f"{title} - " or ""
-    display_image(image, f"{title}Image Rescale Value: {round(scale, 4) if scale else scale}", 2)
+    display_image(image, f"{title}Image Rescale Value: {round(scale, 3) if scale else scale}", dsp_time)
 
 
-def visualize_dataset(dataset, num: int = 5) -> None:
+def visualize_dataset(dataset, num: int = 5, dsp_time: int = 2) -> None:
     print("Visualizing dataset...")
     ds_len = len(dataset)
     for _ in range(num):
@@ -39,11 +39,11 @@ def visualize_dataset(dataset, num: int = 5) -> None:
         print(f"Image Path: {data['image_path']}, Text: {data.get('text')}")
         for key, val in data.items():
             if isinstance(val, np.ndarray):
-                visualize_np_image(val, key)
+                visualize_np_image(val, key, dsp_time)
 
 
-def visualize_data(image: str, labels: list, crop_bbox: bool = True, put_text: bool = False) -> None:
-    image = cv.imread(image)  # Load the image
+def visualize_data(image_path: str, labels: list, crop_bbox: bool = True, put_text: bool = False) -> None:
+    image, image_height, image_width = read_image(image_path, False)  # Load the image
     if scale := get_scale_factor(image):
         image = rescale(scale, image)
 
@@ -52,12 +52,12 @@ def visualize_data(image: str, labels: list, crop_bbox: bool = True, put_text: b
         if bbox:
             bbox = tuple(flatten_iter(bbox))
             bbox = rescale(scale, bbox=bbox) if scale else bbox
-            x_min, y_min, x_max, y_max = map(int, pascal_voc_bb(bbox))  # Change type to int and change bbox format
             if crop_bbox and len(labels) == 1:
-                image = image[y_min:y_max, x_min:x_max]
+                _, image = crop_image(image, image_height, image_width, bbox)
             else:
+                x_min, y_min, x_max, y_max = map(int, pascal_voc_bb(bbox))
                 cv.rectangle(image, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)  # Draw the bbox on the image
-            if text and put_text:
-                cv.putText(image, text, (x_max, y_max), cv.FONT_HERSHEY_PLAIN, 2, (0, 255, 0), 2)
+                if text and put_text:
+                    cv.putText(image, text, (x_max, y_max), cv.FONT_HERSHEY_PLAIN, 2, (0, 255, 0), 2)
 
     display_image(image, f"Image Rescale Value: {round(scale, 6) if scale else scale}")

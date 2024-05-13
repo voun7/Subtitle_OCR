@@ -79,6 +79,27 @@ def rescale(scale: float, frame: np.ndarray = None, bbox: tuple = None) -> np.nd
         return tuple(map(lambda c: c * scale, bbox))
 
 
+def bbox_area(x_min: int, y_min: int, x_max: int, y_max: int) -> float:
+    return (x_max - x_min) * (y_max - y_min)
+
+
+def crop_image(image: np.ndarray, image_height: int, image_width: int, bbox: tuple) -> tuple:
+    """
+    Crop image using bbox. If cropping fails a blank image will be created with the height and width.
+    """
+    blank_image, bbox = False, pascal_voc_bb(tuple(flatten_iter(bbox)))
+    x_min, y_min, x_max, y_max = map(int, bbox)
+    if not bbox_area(x_min, y_min, x_max, y_max):
+        x_min, y_min, x_max, y_max = map(round, bbox)
+    # the bbox coordinates will not be allowed to be out of bounds or negative.
+    x_min, y_min = max(min(x_min, image_width), 1), max(min(y_min, image_height), 1)
+    x_max, y_max = max(min(x_max, image_width), 1), max(min(y_max, image_height), 1)
+    cropped_image = image[y_min:y_max, x_min:x_max]  # crop image with bbox.
+    if not cropped_image.size:  # blank image will be used if crop fails.
+        blank_image, cropped_image = True, np.zeros((image_height, image_width, 3), np.uint8)  # blank image
+    return blank_image, cropped_image
+
+
 def resize_norm_img(image: np.ndarray, new_height: int, new_width: int, pad: bool = True) -> tuple:
     """
     Image scaling and normalization
@@ -88,22 +109,18 @@ def resize_norm_img(image: np.ndarray, new_height: int, new_width: int, pad: boo
     original_height, original_width = image.shape[:2]
     # Calculate aspect ratios
     original_aspect_ratio, new_aspect_ratio = original_width / original_height, new_width / new_height
-
     # Calculate scaling factor
     if original_aspect_ratio > new_aspect_ratio:
         scaling_factor = new_width / original_width
     else:
         scaling_factor = new_height / original_height
-
     # Resize the image while maintaining aspect ratio
-    resized_image = cv.resize(image, (int(original_width * scaling_factor), int(original_height * scaling_factor)))
-
+    resize_h, resize_w = max(int(original_height * scaling_factor), 1), max(int(original_width * scaling_factor), 1)
+    resized_image = cv.resize(image, (resize_w, resize_h))
     if pad:  # Add padding if requested
-        pad_height, pad_width = new_height - resized_image.shape[0], new_width - resized_image.shape[1]
-        bottom_pad, right_pad = pad_height, pad_width
-        resized_image = cv.copyMakeBorder(resized_image, 0, bottom_pad, 0, right_pad, cv.BORDER_CONSTANT,
+        pad_height, pad_width = new_height - resize_h, new_width - resize_w
+        resized_image = cv.copyMakeBorder(resized_image, 0, pad_height, 0, pad_width, cv.BORDER_CONSTANT,
                                           value=(0, 0, 0))
-
     normalized_image = cv.normalize(resized_image, None, norm_type=cv.NORM_MINMAX, dtype=cv.CV_32F)
     image = np.moveaxis(normalized_image, -1, 0)  # change image data format from [H, W, C] to [C, H, W]
     return image, scaling_factor

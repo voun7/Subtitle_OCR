@@ -23,13 +23,13 @@ class SubtitleOCR:
         """
         if model is Types.det:
             model = DB({"name": Types.db, "backbone": "deformable_resnet50", "pretrained": True})
-            state = torch.load(f"{self.models_dir}/{lang} DB deformable_resnet50.pt")
+            state = torch.load(f"{self.models_dir}/{lang} DB deformable_resnet50 (0.472).pt")
             post_processor = DBPostProcess(box_thresh=0.5)
         else:
             with open(f"models/recognition/alphabets/{lang}.txt", encoding="utf-8") as file:
                 alphabet = "".join([line.rstrip("\n") for line in file])
             model = CRNN(**{"image_height": 32, "channel_size": 3, "num_class": len(alphabet) + 1})
-            state = torch.load(f"{self.models_dir}/{lang} CRNN ctc.pt")
+            state = torch.load(f"{self.models_dir}/{lang} CRNN ctc (2.422).pt")
             post_processor = CRNNPostProcess(alphabet)
 
         model.load_state_dict(state)

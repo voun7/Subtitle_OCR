@@ -24,7 +24,7 @@ def generate_trdg_images() -> None:
         "trdg",
         "--output_dir", f"{dataset_dir}/{lang}",  # The output directory.
         "--language", lang,  # The language to use.
-        "--count", "1000000",  # The number of images to be created.
+        "--count", "2_000_000",  # The number of images to be created.
         "--random",  # Define if the produced string will have variable word count (with --length being the maximum).
         "--thread_count", "18",  # Define the number of thread to use for image generation.
         "--background", "3",  # Background to use. 0: Gaussian Noise, 1: Plain white, 2: Quasi crystal, 3: Image.
@@ -35,11 +35,7 @@ def generate_trdg_images() -> None:
         # "--font_dir", "data/#Fonts",  # Define a font directory to be used.
         # "--word_split",  # Split on words instead of on characters.
     ]
-    if lang == "en":
-        command.extend([
-            "--length", "2",  # Define how many words should be included in each generated sample.
-        ])
-    elif lang == "cn":
+    if lang == "cn":
         command.extend([
             "--length", "18",  # Define how many words should be included in each generated sample.
             "--space_width", "0",  # Define the width of the spaces between words

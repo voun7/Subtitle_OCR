@@ -350,15 +350,15 @@ def load_data(lang: Types.Language, model_type: Types.ModelType, data_type: Type
         if model_type == Types.det:
             return merge_data_sources(
                 ICDAR2015Data(data_type),
-                # SynthTextData(data_type),
-                # TextOCR01Data(data_type)
+                SynthTextData(data_type),
+                TextOCR01Data(data_type)
             )
         elif model_type == Types.rec:
             return merge_data_sources(
                 ICDAR2015Data(data_type, model_type),
-                # SynthTextData(data_type, model_type),
-                # TextOCR01Data(data_type, model_type),
-                # TRDGSyntheticData(lang, data_type)
+                SynthTextData(data_type, model_type),
+                TextOCR01Data(data_type, model_type),
+                TRDGSyntheticData(lang, data_type)
             )
     elif lang == Types.chinese:
         if model_type == Types.det:
