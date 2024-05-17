@@ -9,14 +9,9 @@ class StrLabelConverter:
         :param ignore_case: whether to ignore character case.
         """
         self._ignore_case = ignore_case
-        if self._ignore_case:
-            alphabet = alphabet.lower()
-        self.alphabet = alphabet + '-'  # for `-1` index
-
-        self.dict = {}
-        for i, char in enumerate(alphabet):
-            # NOTE: 0 is reserved for 'blank' required by wrap_ctc
-            self.dict[char] = i + 1
+        self.alphabet = alphabet.lower() if self._ignore_case else alphabet
+        # NOTE: 0 is reserved for 'blank' required by ctc loss
+        self.dict = {character: index for index, character in enumerate(self.alphabet, 1)}
 
     def encode(self, text: str | list) -> tuple:
         """
@@ -26,7 +21,8 @@ class StrLabelConverter:
                  torch.LongTensor [n]: length of each text.
         """
         if isinstance(text, str):
-            text = [self.dict[char.lower() if self._ignore_case else char] for char in text]
+            # characters in the text that are not in the provided alphabets will be replaced with index zero
+            text = [self.dict.get(char.lower() if self._ignore_case else char, 0) for char in text]
             length = [len(text)]
         else:
             length = [len(s) for s in text]
@@ -82,10 +78,10 @@ class CRNNPostProcess:
 
 
 if __name__ == '__main__':
-    with open("../alphabets/en.txt") as file:
-        test_alphabet = "".join([line.rstrip("\n") for line in file])
+    with open("../alphabets/en.txt", encoding="utf-8") as file:
+        test_alphabet = " " + "".join([line.rstrip("\n") for line in file])
 
     test_conv = StrLabelConverter(test_alphabet)
-    test_encoded, test_len = test_conv.encode(["Testing 123", "Food", "aaa", "bbb", "ddd", "123", "444"])
+    test_encoded, test_len = test_conv.encode(["Testing 123", "Food", "Σ®ä", "aaa", "bbb", "ddΣ®äd", "123", "444"])
     print(test_encoded, test_len)
     print(test_conv.decode(test_encoded, test_len))

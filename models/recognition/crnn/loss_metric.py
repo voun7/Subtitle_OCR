@@ -17,7 +17,7 @@ class CRNNLoss(nn.Module):
     def forward(self, predictions: torch.Tensor, batch: dict) -> dict:
         prediction_size = torch.LongTensor([predictions.size(0)] * predictions.size(1))
         text, text_lengths = self.converter.encode(batch["text"])
-        loss = self.loss_func(predictions, text, prediction_size, text_lengths)  # / predictions.size(1)
+        loss = self.loss_func(predictions, text, prediction_size, text_lengths)
         return {"loss": loss}
 
 

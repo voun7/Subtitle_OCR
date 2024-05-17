@@ -73,17 +73,17 @@ class ModelTrainer:
         :return: The function that will be called inside the train loop.
         """
 
-        def perform_train_step_fn(image: torch.Tensor, batch: dict) -> tuple[dict, dict | None]:
+        def perform_train_step_fn(images: torch.Tensor, batch: dict) -> tuple[dict, dict | None]:
             """
-            :param image: Image Tensor
+            :param images: Image Tensors
             :param batch: A dictionary with tensor values.
             :return: A loss dict and a metric dict.
             """
-            # Step 1 - Computes our model's predicted output - forward pass
-            output = self.model(image)
+            # Step 1 - Computes our model's predicted outputs - forward pass
+            outputs = self.model(images)
             # Step 2 - Computes the loss and metrics
-            loss = self.loss_fn(output, batch)
-            metric = self.compute_metrics(output, batch)
+            loss = self.loss_fn(outputs, batch)
+            metric = self.compute_metrics(outputs, batch)
             # Step 3 - Computes gradients for both "x" and "y" parameters
             loss['loss'].backward()
             # Step 4 - Updates parameters using gradients and the learning rate
@@ -99,17 +99,17 @@ class ModelTrainer:
         Builds function that performs a step in the validation loop.
         """
 
-        def perform_val_step_fn(image: torch.Tensor, batch: dict) -> tuple[dict, dict | None]:
+        def perform_val_step_fn(images: torch.Tensor, batch: dict) -> tuple[dict, dict | None]:
             """
-            :param image: Image Tensor
+            :param images: Image Tensors
             :param batch: A dictionary with tensor values.
             :return: A loss dict and a metric dict.
             """
-            # Step 1 - Computes our model's predicted output - forward pass
-            output = self.model(image)
+            # Step 1 - Computes our model's predicted outputs - forward pass
+            outputs = self.model(images)
             # Step 2 - Computes the loss and metrics
-            loss = self.loss_fn(output, batch)
-            metric = self.compute_metrics(output, batch, True)
+            loss = self.loss_fn(outputs, batch)
+            metric = self.compute_metrics(outputs, batch, True)
             # There is no need to compute Steps 3 and 4, since we don't update parameters during evaluation
             return loss, metric
 
@@ -146,8 +146,8 @@ class ModelTrainer:
         mini_batch_losses, mini_batch_metrics, metric, num_of_batches = {}, {}, None, len(data_loader)
         for index, batch in enumerate(data_loader):
             self.dict_to_device(batch)
-            image = batch.pop("image")
-            mini_batch_loss, mini_batch_metric = step_fn(image, batch)
+            images = batch.pop("image")
+            mini_batch_loss, mini_batch_metric = step_fn(images, batch)
             self.append_dict_val(mini_batch_loss, mini_batch_losses)
             if self.metrics_fn:
                 self.append_dict_val(mini_batch_metric, mini_batch_metrics)
@@ -276,8 +276,9 @@ class ModelTrainer:
 
     def load_checkpoint(self, model_checkpoint_file: str) -> None:
         if not model_checkpoint_file or not Path(model_checkpoint_file).exists():
-            logger.warning(f"Checkpoint Not Loaded! Checkpoint File {model_checkpoint_file} Does Not Exist.")
+            logger.warning("Checkpoint File Not Loaded or Does Not Exist.")
             return
+        logger.info(f"Checkpoint File Loaded! File: {model_checkpoint_file}")
         # Loads dictionary
         checkpoint = torch.load(model_checkpoint_file)
         # Restore state for model and optimizer
@@ -295,6 +296,8 @@ class ModelTrainer:
         logger.info(f"Model Checkpoint Loaded: Model Params No: {len([k for k, _ in self.model.named_parameters()])},\n"
                     f"Optimizer: {self.optimizer},\nTotal Epochs: {self.total_epochs}, Best Loss: {self.best_loss}\n"
                     f"Loss Keys: {[k for k in self.losses]},\nVal Loss Keys: {[k for k in self.val_losses]}{met_p}")
+        logger.debug(f"Checkpoint Loss & Metric Values:\n{self.losses = },\n{self.val_losses = },\n{self.metrics = },\n"
+                     f"{self.val_metrics = }")
 
     def save_model(self, last_val_loss: float = None) -> None:
         """

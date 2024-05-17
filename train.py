@@ -17,14 +17,14 @@ logger = logging.getLogger(__name__)
 
 def train_text_detection(lang: Types.Language) -> None:
     # Setup hyperparameters
-    num_epochs = 50
+    num_epochs = 10
     batch_size, val_batch_size = 16, 1
-    learning_rate = 0.001
-    num_workers = 10
+    patience, learning_rate = 4, 0.001
+    num_workers = 4
     model_name, backbone = Types.db, "deformable_resnet50"
     image_height, image_width = 640, 640
 
-    logger.info("Loading Text Detection Data...")
+    logger.info(f"Loading {lang} Text Detection Data...")
     train_ds = TextDetectionDataset(lang, Types.train, model_name, image_height, image_width)
     val_ds = TextDetectionDataset(lang, Types.val, model_name, image_height, image_width)
     logger.info(f"Loading Completed... Dataset Size Train: {len(train_ds):,}, Val: {len(val_ds):,}")
@@ -33,7 +33,7 @@ def train_text_detection(lang: Types.Language) -> None:
     model_params = {"name": model_name, "backbone": backbone, "pretrained": True}
     model = DB(model_params)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    lr_scheduler = ReduceLROnPlateau(optimizer)
+    lr_scheduler = ReduceLROnPlateau(optimizer, patience=patience)
     train_params = {
         "loss_fn": DBLoss(), "metrics_fn": DBMetrics(), "optimizer": optimizer, "lr_scheduler": lr_scheduler,
         "num_epochs": num_epochs,
@@ -48,26 +48,26 @@ def train_text_detection(lang: Types.Language) -> None:
 
 def train_text_recognition(lang: Types.Language) -> None:
     # Setup hyperparameters
-    num_epochs = 200
-    batch_size, val_batch_size = 64, 256
-    learning_rate = 0.0001
-    num_workers = 10
+    num_epochs = 10
+    batch_size, val_batch_size = 256, 4096
+    patience, learning_rate = 4, 0.0001
+    num_workers = 2
     model_name, backbone = Types.crnn, "ctc"
     image_height, image_width = 32, 160
 
-    logger.info("Loading Text Recognition Data...")
+    logger.info(f"Loading {lang} Text Recognition Data...")
     train_ds = TextRecognitionDataset(lang, Types.train, model_name, image_height, image_width)
     val_ds = TextRecognitionDataset(lang, Types.val, model_name, image_height, image_width)
     logger.info(f"Loading Completed... Dataset Size Train: {len(train_ds):,}, Val: {len(val_ds):,}")
     visualize_dataset(train_ds)
 
     with open(f"models/recognition/alphabets/{lang}.txt", encoding="utf-8") as file:
-        alphabet = "".join([line.rstrip("\n") for line in file])
+        alphabet = " " + "".join([line.rstrip("\n") for line in file])
 
     model_params = {"image_height": image_height, "channel_size": 3, "num_class": len(alphabet) + 1}
     model = CRNN(**model_params)
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)  # RMSprop
-    lr_scheduler = ReduceLROnPlateau(optimizer)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    lr_scheduler = ReduceLROnPlateau(optimizer, patience=patience)
     train_params = {
         "loss_fn": CRNNLoss(alphabet), "metrics_fn": CRNNMetrics(alphabet), "optimizer": optimizer,
         "lr_scheduler": lr_scheduler,
