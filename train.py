@@ -9,7 +9,7 @@ from models.recognition.crnn import CRNN, CRNNLoss, CRNNMetrics
 from utilities.logger_setup import setup_logging
 from utilities.telegram_bot import TelegramBot
 from utilities.trainer import ModelTrainer
-from utilities.utils import Types
+from utilities.utils import Types, read_chars
 from utilities.visualize import visualize_dataset
 
 logger = logging.getLogger(__name__)
@@ -61,9 +61,7 @@ def train_text_recognition(lang: Types.Language) -> None:
     logger.info(f"Loading Completed... Dataset Size Train: {len(train_ds):,}, Val: {len(val_ds):,}")
     visualize_dataset(train_ds)
 
-    with open(f"models/recognition/alphabets/{lang}.txt", encoding="utf-8") as file:
-        alphabet = " " + "".join([line.rstrip("\n") for line in file])
-
+    alphabet = read_chars(lang)
     model_params = {"image_height": image_height, "channel_size": 3, "num_class": len(alphabet) + 1}
     model = CRNN(**model_params)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)

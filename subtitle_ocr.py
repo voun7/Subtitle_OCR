@@ -1,15 +1,21 @@
+import logging
+from pathlib import Path
+
 import torch
 
 from models.detection.db import DB, DBPostProcess
 from models.recognition.crnn import CRNN, CRNNPostProcess
-from utilities.utils import Types, read_image, resize_norm_img, pascal_voc_bb, flatten_iter
+from utilities.logger_setup import setup_logging
+from utilities.utils import Types, read_image, resize_norm_img, pascal_voc_bb, flatten_iter, read_chars
 from utilities.visualize import visualize_data
+
+logger = logging.getLogger(__name__)
 
 
 class SubtitleOCR:
 
     def __init__(self, lang: Types.Language = Types.english) -> None:
-        self.models_dir = r"C:\Users\Victor\OneDrive\Backups\Subtitle OCR Models"
+        self.models_dir = Path(r"C:\Users\Victor\OneDrive\Backups\Subtitle OCR Models")
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
         self.det_h, self.det_w = 640, 640
@@ -22,19 +28,20 @@ class SubtitleOCR:
         Setup model and post processor.
         """
         if model is Types.det:
-            model = DB({"name": Types.db, "backbone": "deformable_resnet50", "pretrained": True})
-            state = torch.load(f"{self.models_dir}/{lang} DB deformable_resnet50 (0.472).pt")
+            model_params = {"name": Types.db, "backbone": "deformable_resnet50", "pretrained": True}
+            model = DB(model_params)
+            file = next(self.models_dir.glob(f"{lang} DB deformable_resnet50 *.pt"))  # get first matching file
             post_processor = DBPostProcess(box_thresh=0.5)
         else:
-            with open(f"models/recognition/alphabets/{lang}.txt", encoding="utf-8") as file:
-                alphabet = "".join([line.rstrip("\n") for line in file])
-            model = CRNN(**{"image_height": 32, "channel_size": 3, "num_class": len(alphabet) + 1})
-            state = torch.load(f"{self.models_dir}/{lang} CRNN ctc (2.422).pt")
+            alphabet = read_chars(lang)
+            model_params = {"image_height": self.rec_h, "channel_size": 3, "num_class": len(alphabet) + 1}
+            model = CRNN(**model_params)
+            file = next(self.models_dir.glob(f"{lang} CRNN ctc *.pt"))
             post_processor = CRNNPostProcess(alphabet)
 
-        model.load_state_dict(state)
-        model.to(self.device)
-        model.eval()
+        logger.debug(f"Model Params: {model_params} File: {file}")
+        model.load_state_dict(torch.load(file))
+        model.to(self.device).eval()
         return model, post_processor
 
     def text_detector(self, image_path: str) -> tuple:
@@ -55,9 +62,9 @@ class SubtitleOCR:
             tensor_image = torch.from_numpy(tensor_image).to(self.device)
             rec_batch.append(tensor_image)
         predictions = self.rec_model(torch.stack(rec_batch))
-        texts, _ = self.rec_post_process(predictions)
+        texts, scores = self.rec_post_process(predictions)
         for idx, labels in enumerate(image_labels):
-            labels["text"] = texts[idx]
+            labels["text"], labels["score"] = texts[idx], scores[idx]
         return image_labels
 
     @torch.no_grad()
@@ -67,9 +74,9 @@ class SubtitleOCR:
         return labels
 
 
-def test_main() -> None:
+def test_ocr() -> None:
     test_sub_ocr = SubtitleOCR()
-    test_image_file = r"C:\Users\Victor\Documents\Python Datasets\Subtitle_OCR\ICDAR 2015\train\images\img_10.jpg"
+    test_image_file = r"C:\Users\Victor\OneDrive\Public\test img1.png"
     test_outputs = test_sub_ocr.ocr(test_image_file)
     for output in test_outputs:
         print(output)
@@ -77,4 +84,7 @@ def test_main() -> None:
 
 
 if __name__ == '__main__':
-    test_main()
+    setup_logging()
+    logger.debug("\n\nLogging Started")
+    test_ocr()
+    logger.debug("Logging Ended\n\n")

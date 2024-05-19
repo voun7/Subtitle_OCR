@@ -234,7 +234,7 @@ class ModelTrainer:
         self.writer.close()  # Closes the writer
         self.save_model(val_loss["loss"])
         total_time = timedelta(seconds=round(perf_counter() - start_time))
-        logger.info(f"Model Training Completed & Model Saved! Total Time: {total_time}")
+        logger.info(f"Model Training Completed. Total Time: {total_time}")
         logger.debug(f"{self.losses = },\n{self.val_losses = },\n{self.metrics = }, \n{self.val_metrics = }")
 
     def record_values(self, loss: dict, val_loss: dict, metric: dict, val_metric: dict) -> None:
@@ -307,6 +307,7 @@ class ModelTrainer:
         last_val_loss = f" ({last_val_loss})" if last_val_loss else ""
         model_name = self.model_dir.joinpath(f"{self.model_filename}{last_val_loss}.pt")
         torch.save(self.model.state_dict(), model_name)
+        logger.info(f"Model Saved! Name: {model_name}")
 
 
 def plot_checkpoint(model_checkpoint_file: str) -> None:

@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import NewType, Iterable, Generator
 
 import cv2 as cv
@@ -124,3 +125,12 @@ def resize_norm_img(image: np.ndarray, new_height: int, new_width: int, pad: boo
     normalized_image = cv.normalize(resized_image, None, norm_type=cv.NORM_MINMAX, dtype=cv.CV_32F)
     image = np.moveaxis(normalized_image, -1, 0)  # change image data format from [H, W, C] to [C, H, W]
     return image, scaling_factor
+
+
+def read_chars(lang: Types.Language) -> str:
+    """
+    Read the alphabet of the given language from the language file.
+    """
+    alphabet_file = Path(__file__).parent.parent / f"models/recognition/alphabets/{lang}.txt"
+    alphabet = " " + "".join([line.rstrip("\n") for line in alphabet_file.read_text(encoding="utf-8")])
+    return alphabet

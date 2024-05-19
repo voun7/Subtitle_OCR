@@ -22,7 +22,7 @@ class CRNNLoss(nn.Module):
 
 
 class CRNNMetrics:
-    def __init__(self, alphabet: str, ignore_space: bool = True) -> None:
+    def __init__(self, alphabet: str, ignore_space: bool = False) -> None:
         self.post_process = CRNNPostProcess(alphabet)
         self.ignore_space = ignore_space
 

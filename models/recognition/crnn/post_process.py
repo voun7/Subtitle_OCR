@@ -1,5 +1,7 @@
 import torch
 
+from utilities.utils import Types, read_chars
+
 
 class StrLabelConverter:
     def __init__(self, alphabet: str, ignore_case: bool = False) -> None:
@@ -71,16 +73,14 @@ class CRNNPostProcess:
     def __call__(self, predictions: torch.Tensor) -> tuple:
         prediction_size = torch.LongTensor([predictions.size(0)] * predictions.size(1))
         scores, predictions = predictions.max(2)
-        # todo: implement scores for predictions
-        predictions = predictions.transpose(1, 0).contiguous().view(-1)
+        scores, predictions = scores.transpose(1, 0), predictions.transpose(1, 0).contiguous().view(-1)
+        scores = torch.mean(torch.exp(scores), 1).tolist()
         predictions = self.converter.decode(predictions, prediction_size, False)
         return predictions, scores
 
 
 if __name__ == '__main__':
-    with open("../alphabets/en.txt", encoding="utf-8") as file:
-        test_alphabet = " " + "".join([line.rstrip("\n") for line in file])
-
+    test_alphabet = read_chars(Types.english)
     test_conv = StrLabelConverter(test_alphabet)
     test_encoded, test_len = test_conv.encode(["Testing 123", "Food", "Σ®ä", "aaa", "bbb", "ddΣ®äd", "123", "444"])
     print(test_encoded, test_len)
