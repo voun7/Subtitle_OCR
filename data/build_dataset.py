@@ -26,28 +26,31 @@ class TextDetectionDataset(Dataset):
         ], random_order=True)
         return augment_seq
 
-    def data_augmentation(self, image: np.ndarray, anns: list) -> tuple:
+    def data_augmentation(self, image: np.ndarray, image_labels: list) -> tuple:
         aug = self.transform.to_deterministic()
         image_shape = image.shape
         image = aug.augment_image(image)
-        new_anns = []
-        for ann in anns:
-            key_points = [Keypoint(p[0], p[1]) for p in ann['bbox']]
+        augmented_image_labels = []
+        for label in image_labels:
+            key_points = [Keypoint(x, y) for x, y in label['bbox']]
             key_points = aug.augment_keypoints([KeypointsOnImage(key_points, shape=image_shape)])[0].keypoints
             # min and max are used here to fix out of bound or negative key points
             poly = [(min(max(0, p.x), image.shape[1] - 1), min(max(0, p.y), image.shape[0] - 1)) for p in key_points]
-            new_ann = {'bbox': poly, 'text': ann['text']}
-            new_anns.append(new_ann)
-        return image, new_anns
+            augmented_image_labels.append({'bbox': poly})
+        return image, augmented_image_labels
 
     def __len__(self) -> int:
         return len(self.img_data)
 
     def __getitem__(self, idx: int) -> dict:
         image_path, image_labels = self.img_data[idx]
-        image = read_image(str(image_path))[0]
+        image, image_height, image_width = read_image(str(image_path))
         if self.data_type == Types.train:
             image, image_labels = self.data_augmentation(image, image_labels)
+        else:
+            # the bbox coordinates will not be allowed to be out of bounds or negative to prevent errors.
+            image_labels = [{'bbox': [(max(min(x, image_width), 1), max(min(y, image_height), 1)) for x, y in
+                                      label["bbox"]]} for label in image_labels]
         image, scale = resize_norm_img(image, self.image_height, self.image_width)
         image_labels = [{"bbox": pairwise_tuples(rescale(scale, bbox=tuple(flatten_iter(label["bbox"]))))} for label in
                         image_labels]
@@ -94,8 +97,8 @@ def test_dataset() -> None:
     """
     Code for testing index's of the dataset for errors.
     """
-    # dataset = TextDetectionDataset(Types.english, Types.train, Types.db, 640, 640)
-    dataset = TextRecognitionDataset(Types.english, Types.train, Types.crnn, 32, 160)
+    dataset = TextDetectionDataset(Types.english, Types.train, Types.db, 640, 640)
+    # dataset = TextRecognitionDataset(Types.english, Types.train, Types.crnn, 32, 160)
     # print(dataset[])
     dataset_len, start_idx = len(dataset), 0
     print(f"Dataset Size: {dataset_len:,}")

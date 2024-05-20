@@ -86,6 +86,6 @@ def test_ocr() -> None:
 
 if __name__ == '__main__':
     setup_logging()
-    logger.debug("\n\nLogging Started")
+    logger.debug("\n\nTest Logging Started")
     test_ocr()
-    logger.debug("Logging Ended\n\n")
+    logger.debug("Test Logging Ended\n\n")

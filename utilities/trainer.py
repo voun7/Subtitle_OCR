@@ -291,11 +291,11 @@ class ModelTrainer:
         met_p = ''  # Metrics Print
         if self.metrics_fn:
             self.metrics, self.val_metrics = checkpoint['metrics'], checkpoint['val_metrics']
-            met_p = f"\nMetric Keys: {[k for k in self.metrics]},\nVal Metric Keys: {[k for k in self.val_metrics]}\n"
+            met_p = f"\nMetric Keys: {list(self.metrics)},\nVal Metric Keys: {list(self.val_metrics)}\n"
         self.num_epochs += self.total_epochs  # update the overall number of epochs
-        logger.info(f"Model Checkpoint Loaded: Model Params No: {len([k for k, _ in self.model.named_parameters()])},\n"
+        logger.info(f"Model Checkpoint Loaded: Model Params No: {len(list(self.model.named_parameters()))},\n"
                     f"Optimizer: {self.optimizer},\nTotal Epochs: {self.total_epochs}, Best Loss: {self.best_loss}\n"
-                    f"Loss Keys: {[k for k in self.losses]},\nVal Loss Keys: {[k for k in self.val_losses]}{met_p}")
+                    f"Loss Keys: {list(self.losses)},\nVal Loss Keys: {list(self.val_losses)}{met_p}")
         logger.debug(f"Checkpoint Loss & Metric Values:\n{self.losses = },\n{self.val_losses = },\n{self.metrics = },\n"
                      f"{self.val_metrics = }")
 
@@ -321,7 +321,7 @@ def plot_checkpoint(model_checkpoint_file: str) -> None:
     metrics, val_metrics = checkpoint.get('metrics'), checkpoint.get('val_metrics')
     if metrics and val_metrics:
         losses.update(metrics), val_losses.update(val_metrics)
-    train_keys, val_keys = [k for k in losses], [k for k in val_losses]
+    train_keys, val_keys = list(losses), list(val_losses)
     logger.info(f"Plotting Loaded Model Checkpoint: \tTotal Epochs: {total_epochs}, Best Loss: {best_loss}\n"
                 f"Training Keys: {train_keys},\nValidation Keys: {val_keys}")
 

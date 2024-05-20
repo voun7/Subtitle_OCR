@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 def train_text_detection(lang: Types.Language) -> None:
     # Setup hyperparameters
     num_epochs = 10
-    batch_size, val_batch_size = 16, 1
+    batch_size, val_batch_size = 12, 1
     patience, learning_rate = 4, 0.001
     num_workers = 4
     model_name, backbone = Types.db, "deformable_resnet50"
@@ -97,6 +97,6 @@ def main(lang: Types.Language, model_type: Types.ModelType) -> None:
 if __name__ == '__main__':
     setup_logging()
     TelegramBot.credential_file = "credentials/telegram auth.json"
-    logger.debug("\n\nLogging Started")
+    logger.debug("\n\nTrain Logging Started")
     main(Types.english, Types.det)
-    logger.debug("Logging Ended\n\n")
+    logger.debug("Train Logging Ended\n\n")

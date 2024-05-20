@@ -1,5 +1,7 @@
 import subprocess
 
+from utilities.utils import Types
+
 
 def generate_trdg_images() -> None:
     """
@@ -19,11 +21,10 @@ def generate_trdg_images() -> None:
     ImageFile.LOAD_TRUNCATED_IMAGES = True
     """
     dataset_dir = r"C:\Users\Victor\Documents\Python Datasets\Subtitle_OCR\TRDG Synthetic Images"
-    lang = "en"  # 'en' for English, 'cn' for Chinese (rename folder to ch later)
+    lang = Types.english
     command = [
         "trdg",
         "--output_dir", f"{dataset_dir}/{lang}",  # The output directory.
-        "--language", lang,  # The language to use.
         "--count", "2_000_000",  # The number of images to be created.
         "--random",  # Define if the produced string will have variable word count (with --length being the maximum).
         "--thread_count", "18",  # Define the number of thread to use for image generation.
@@ -35,9 +36,15 @@ def generate_trdg_images() -> None:
         # "--font_dir", "data/#Fonts",  # Define a font directory to be used.
         # "--word_split",  # Split on words instead of on characters.
     ]
-    if lang == "cn":
+    if lang == "en":
         command.extend([
-            "--length", "18",  # Define how many words should be included in each generated sample.
+            "--language", lang,  # The language to use.
+            "--length", "3",  # Define how many words should be included in each generated sample.
+        ])
+    elif lang == "ch":
+        command.extend([
+            "--language", "cn",  # The language to use. (trdg uses cn for chinese)
+            "--length", "18",
             "--space_width", "0",  # Define the width of the spaces between words
         ])
     print(f"Command: {' '.join(command)}")
