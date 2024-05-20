@@ -98,5 +98,5 @@ if __name__ == '__main__':
     setup_logging()
     TelegramBot.credential_file = "credentials/telegram auth.json"
     logger.debug("\n\nLogging Started")
-    main(Types.english, Types.rec)
+    main(Types.english, Types.det)
     logger.debug("Logging Ended\n\n")
