@@ -95,8 +95,8 @@ def main(lang: Types.Language, model_type: Types.ModelType) -> None:
 
 
 if __name__ == '__main__':
-    setup_logging()
+    setup_logging("training")
     TelegramBot.credential_file = "credentials/telegram auth.json"
-    logger.debug("\n\nTrain Logging Started")
-    main(Types.english, Types.det)
-    logger.debug("Train Logging Ended\n\n")
+    logger.debug("Logging Started")
+    main(Types.english, Types.rec)
+    logger.debug("Logging Ended")

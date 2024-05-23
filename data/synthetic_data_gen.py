@@ -6,6 +6,7 @@ from utilities.utils import Types
 def generate_trdg_images() -> None:
     """
     Use trdg package to generate images with text for training model.
+    When random is off consider deleting all 1kb image files because their text are usually blended with the background.
     pip install trdg
 
     Errors and Fixes (paste them directly in the package module)
@@ -25,7 +26,7 @@ def generate_trdg_images() -> None:
     command = [
         "trdg",
         "--output_dir", f"{dataset_dir}/{lang}",  # The output directory.
-        "--count", "2_000_000",  # The number of images to be created.
+        "--count", "4_000_000",  # The number of images to be created.
         "--random",  # Define if the produced string will have variable word count (with --length being the maximum).
         "--thread_count", "18",  # Define the number of thread to use for image generation.
         "--background", "3",  # Background to use. 0: Gaussian Noise, 1: Plain white, 2: Quasi crystal, 3: Image.
@@ -39,13 +40,13 @@ def generate_trdg_images() -> None:
     if lang == "en":
         command.extend([
             "--language", lang,  # The language to use.
-            "--length", "3",  # Define how many words should be included in each generated sample.
+            "--length", "12",  # Define how many words should be included in each generated sample.
         ])
     elif lang == "ch":
         command.extend([
             "--language", "cn",  # The language to use. (trdg uses cn for chinese)
-            "--length", "18",
-            "--space_width", "0",  # Define the width of the spaces between words
+            "--length", "20",
+            # "--space_width", "0",  # Define the width of the spaces between words
         ])
     print(f"Command: {' '.join(command)}")
     try:

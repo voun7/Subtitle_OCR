@@ -245,8 +245,7 @@ class ModelTrainer:
         self.clear_previous_print()
         if hasattr(self.metrics_fn, "gather_val_metrics"):
             more_val_metric = self.metrics_fn.gather_val_metrics()
-            val_metric.update(more_val_metric)
-            self.append_dict_val(more_val_metric, self.val_metrics)
+            self.append_dict_val(more_val_metric, self.val_metrics), val_metric.update(more_val_metric)
         space = "\n" if len(loss) > 1 else " "
         metric_txt = f"Training Metric: {metric}, Validation Metric: {val_metric},{space}" if self.metrics_fn else ""
         logger.info(f"Epoch: {self.total_epochs}/{self.num_epochs}, Current lr={current_lr},\n{metric_txt}"

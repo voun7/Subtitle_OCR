@@ -72,7 +72,7 @@ class TextRecognitionDataset(Dataset):
     @staticmethod
     def augmentations() -> iaa.meta.Sequential:
         augment_seq = iaa.Sequential([
-            iaa.Affine(scale=(0.8, 1.2), rotate=(-5, 5)),
+            iaa.Affine(scale=(0.8, 1.0), rotate=(-5, 5)),
             iaa.GaussianBlur((0.0, 1.0)),
             iaa.Sometimes(0.5, iaa.Sharpen(alpha=(0.0, 1.0)), iaa.SaltAndPepper(0.1, per_channel=True))
         ], random_order=True)
@@ -89,6 +89,7 @@ class TextRecognitionDataset(Dataset):
             blank, image = crop_image(image, image_height, image_width, bbox)
         if self.data_type == Types.train:
             image = self.transform.augment_image(image)
+        # todo: try if variable widths can be used for the model
         image = resize_norm_img(image, self.image_height, self.image_width)[0]
         return {"image_path": str(image_path), "image": image, "text": " " if blank else text}
 

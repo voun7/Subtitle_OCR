@@ -49,9 +49,8 @@ class SubtitleOCR:
         batch = {"shape": [(image_height, image_width)]}
         bboxes, scores = self.det_post_process(batch, prediction)
         # todo: Either implement sorting for bboxes containing a single word or merge multiple single word bboxes on
-        #  the same line to form larger bbox with multiple texts for text recognition. Text recognition model may have
-        #  to be trained on recognizing multiple words at a time including the spacing of the words or
-        #  Text detector may have to be trained to detect only single words.
+        #  the same line to form larger bbox with multiple texts for text recognition. Text recognition model should
+        #  be trained on recognizing multiple words at a time including the spacing of the words.
         return image, [{"bbox": bbox.tolist()} for bbox, score in zip(bboxes[0], scores[0]) if score]
 
     def text_recognizer(self, image, image_labels: list) -> list:
@@ -80,12 +79,12 @@ def test_ocr() -> None:
     test_image_file = r"C:\Users\Victor\OneDrive\Public\test img1.png"
     test_outputs = test_sub_ocr.ocr(test_image_file)
     for output in test_outputs:
-        print(output)
+        logger.info(output)
     visualize_data(test_image_file, test_outputs, False, True)
 
 
 if __name__ == '__main__':
     setup_logging()
-    logger.debug("\n\nTest Logging Started")
+    logger.debug("Logging Started")
     test_ocr()
-    logger.debug("Test Logging Ended\n\n")
+    logger.debug("Logging Ended")

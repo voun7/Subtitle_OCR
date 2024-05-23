@@ -1,6 +1,6 @@
 import logging
 import sys
-from logging.handlers import TimedRotatingFileHandler
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 
@@ -15,8 +15,10 @@ def get_console_handler() -> logging.handlers:
 
 def get_file_handler(log_dir: Path, log_format: logging.Formatter) -> logging.handlers:
     log_file = log_dir / "runtime.log"
-    file_handler = TimedRotatingFileHandler(log_file, when='midnight', interval=1, backupCount=7, encoding='utf-8')
+    file_handler = RotatingFileHandler(log_file, backupCount=7, encoding='utf-8', delay=True)
     file_handler.namer = my_namer
+    if log_file.exists():
+        file_handler.doRollover()
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(log_format)
     return file_handler
@@ -31,7 +33,7 @@ def reset_handlers(logger) -> None:
         logger.removeHandler(handler)
 
 
-def setup_logging() -> None:
+def setup_logging(name: str = "") -> None:
     """
     Use the following to add logger to other modules.
     import logging
@@ -41,8 +43,8 @@ def setup_logging() -> None:
     logging.getLogger("module_name").setLevel(logging.WARNING)
     """
     # Create folder for file logs.
-    log_dir = Path(__file__).parent.parent / "logs"
-    log_dir.mkdir(exist_ok=True)
+    log_dir = Path(__file__).parent.parent / f"logs{f'/{name}' if name else name}"
+    log_dir.mkdir(parents=True, exist_ok=True)
 
     # Create a custom logger.
     logger = logging.getLogger()

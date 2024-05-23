@@ -172,4 +172,4 @@ class DBMetrics:
         metrics["recall"] = metrics['recall'].avg
         metrics["precision"] = metrics['precision'].avg
         metrics["f_measure"] = metrics['f_measure'].avg
-        return {key: round(value, 2) for key, value in metrics.items()}
+        return metrics
