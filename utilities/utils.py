@@ -107,7 +107,7 @@ def resize_norm_img(image: np.ndarray, new_height: int, new_width: int, pad: boo
     :return: resized normalized image and the rescale value
     """
     # Get the dimensions of the original image
-    original_height, original_width = image.shape[:2]
+    original_height, original_width, _ = image.shape
     # Calculate aspect ratios
     original_aspect_ratio, new_aspect_ratio = original_width / original_height, new_width / new_height
     # Calculate scaling factor

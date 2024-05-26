@@ -74,7 +74,8 @@ class CRNNPostProcess:
         prediction_size = torch.LongTensor([predictions.size(0)] * predictions.size(1))
         scores, predictions = predictions.max(2)
         scores, predictions = scores.transpose(1, 0), predictions.transpose(1, 0).contiguous().view(-1)
-        scores = torch.mean(torch.exp(scores), 1).tolist()
+        scores = torch.mean(torch.exp(scores), 1)
+        scores = scores.item() if scores.numel() == 1 else scores.tolist()
         predictions = self.converter.decode(predictions, prediction_size, False)
         return predictions, scores
 

@@ -80,8 +80,11 @@ class ICDAR2015Data:
                 for label in labels:
                     label = label.split(',', maxsplit=8)
                     bbox, text = pairwise_tuples(tuple(map(float, label[:8]))), label[8:][0]
+                    if text in self.ignore_tags:
+                        continue
                     img_bb_txt.append({"bbox": bbox, "text": text})
-                img_data.append((img_path, img_bb_txt))
+                if img_bb_txt:
+                    img_data.append((img_path, img_bb_txt))
         return img_data
 
 
@@ -118,8 +121,11 @@ class ICDAR2017RCTWData:
                 for label in labels:
                     label = label.split(',', maxsplit=9)
                     bbox, text = pairwise_tuples(tuple(map(float, label[:8]))), label[9:][0].strip('\"')
+                    if text in self.ignore_tags:
+                        continue
                     img_bb_txt.append({"bbox": bbox, "text": text})
-                img_data.append((img_path, img_bb_txt))
+                if img_bb_txt:
+                    img_data.append((img_path, img_bb_txt))
         return img_data
 
 
@@ -150,8 +156,11 @@ class ICDAR2019LSVTFullData:
                 img_bb_txt = []
                 for label in labels[img_path.stem]:
                     bbox, text = label["points"], label["transcription"]
+                    if text in self.ignore_tags:
+                        continue
                     img_bb_txt.append({"bbox": bbox, "text": text})
-                img_data.append((img_path, img_bb_txt))
+                if img_bb_txt:
+                    img_data.append((img_path, img_bb_txt))
         return img_data
 
     def load_data(self) -> list:
@@ -379,7 +388,7 @@ def load_data(lang: Types.Language, model_type: Types.ModelType, data_type: Type
 if __name__ == '__main__':
     start = perf_counter()
 
-    ts_data = load_data(Types.english, Types.rec, Types.train)
+    ts_data = load_data(Types.english, Types.det, Types.train)
     ts_len = len(ts_data)
     print(f"Data Source Length: {ts_len:,} Data Load Time: {perf_counter() - start:.4f}\n")
     for ts_idx in range(0, ts_len, round(ts_len / 200)):

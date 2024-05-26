@@ -40,12 +40,12 @@ def generate_trdg_images() -> None:
     if lang == "en":
         command.extend([
             "--language", lang,  # The language to use.
-            "--length", "12",  # Define how many words should be included in each generated sample.
+            "--length", "3",  # Define how many words should be included in each generated sample.
         ])
     elif lang == "ch":
         command.extend([
             "--language", "cn",  # The language to use. (trdg uses cn for chinese)
-            "--length", "20",
+            "--length", "16",
             # "--space_width", "0",  # Define the width of the spaces between words
         ])
     print(f"Command: {' '.join(command)}")

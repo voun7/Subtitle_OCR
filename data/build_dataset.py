@@ -89,7 +89,6 @@ class TextRecognitionDataset(Dataset):
             blank, image = crop_image(image, image_height, image_width, bbox)
         if self.data_type == Types.train:
             image = self.transform.augment_image(image)
-        # todo: try if variable widths can be used for the model
         image = resize_norm_img(image, self.image_height, self.image_width)[0]
         return {"image_path": str(image_path), "image": image, "text": " " if blank else text}
 
