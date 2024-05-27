@@ -27,9 +27,9 @@ class SubtitleOCR:
         """
         if model_type is Types.det:
             image_height, image_weight = 640, 640
-            model_params = {"name": Types.db, "backbone": "deformable_resnet50", "pretrained": True}
+            model_params = {"name": Types.db, "backbone": "deformable_resnet50", "pretrained": False}
             model, file = DB(model_params), next(self.models_dir.glob(f"{lang} DB deformable_resnet50 *.pt"))
-            post_processor = DBPostProcess(box_thresh=0.6)
+            post_processor = DBPostProcess()
         else:
             alphabet, image_height, image_weight = read_chars(lang), 32, None
             model_params = {"image_height": image_height, "channel_size": 3, "num_class": len(alphabet) + 1}
@@ -42,13 +42,14 @@ class SubtitleOCR:
         return model, post_processor, image_height, image_weight
 
     @staticmethod
-    def sort_merge_bboxes(bboxes, scores):
+    def sort_merge_bboxes(bboxes, scores) -> list:
         """
         Sort and merge bboxes that are very close and on the same horizontal line to create larger bboxes.
         e.g, Single word bboxes that are close to each other would merge together to form a bbox containing a sentence.
         """
         # todo: Fully implement this function.
-        return bboxes, scores
+        labels = [{"bbox": bbox.tolist()} for bbox, score in zip(bboxes, scores) if score]
+        return labels
 
     def text_detector(self, image, image_height: int, image_width: int) -> list:
         tensor_image = resize_norm_img(image, self.det_img_h, self.det_img_w, False)[0]
@@ -56,8 +57,8 @@ class SubtitleOCR:
         prediction = self.det_model(tensor_image.unsqueeze(0))
         batch = {"shape": [(image_height, image_width)]}
         bboxes, scores = self.det_post_process(batch, prediction)
-        bboxes, scores = self.sort_merge_bboxes(bboxes, scores)
-        return [{"bbox": bbox.tolist()} for bbox, score in zip(bboxes[0], scores[0]) if score]
+        labels = self.sort_merge_bboxes(bboxes[0], scores[0])
+        return labels
 
     def text_recognizer(self, image, labels: list) -> list:
         def recognizer(img) -> tuple:

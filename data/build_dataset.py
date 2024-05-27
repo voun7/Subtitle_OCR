@@ -93,23 +93,38 @@ class TextRecognitionDataset(Dataset):
         return {"image_path": str(image_path), "image": image, "text": " " if blank else text}
 
 
-def test_dataset() -> None:
+def test_datasets() -> None:
     """
-    Code for testing index's of the dataset for errors.
+    Code for testing index's of the datasets for errors.
     """
-    dataset = TextDetectionDataset(Types.english, Types.train, Types.db, 640, 640)
-    # dataset = TextRecognitionDataset(Types.english, Types.train, Types.crnn, 32, 160)
-    # print(dataset[])
-    dataset_len, start_idx = len(dataset), 0
-    print(f"Dataset Size: {dataset_len:,}")
-    for idx in range(start_idx, dataset_len):
-        try:
-            _ = dataset[idx]
-            print(f"\ridx: {idx:,}/{dataset_len:,} passed test", end='', flush=True)
-        except Exception as error:
-            print(end="\r", flush=True)
-            print(f"idx {idx} failed test. {error}")
+
+    def dataset_tester(lang_: str, dataset, start_idx: int = 0) -> None:
+        name, dataset_len = f"{lang_} {dataset.data_type} {dataset.model_name}", len(dataset)
+        print(f"Testing {name} Dataset, Size: {dataset_len:,}")
+        for idx in range(start_idx, dataset_len):
+            try:
+                _ = dataset[idx]
+                print(f"\ridx: {idx:,}/{dataset_len:,} passed test", end='', flush=True)
+            except Exception as error:
+                print(end="\r", flush=True)
+                print(f"idx {idx} failed test. {error}")
+        print(f"\nTesting for {name} Dataset done!\n")
+
+    types = [(Types.english, Types.train), (Types.english, Types.val), (Types.chinese, Types.train),
+             (Types.chinese, Types.val)]
+    datasets = [(TextDetectionDataset, Types.db, 640, 640), (TextRecognitionDataset, Types.crnn, 32, 160)]
+
+    # For Testing of specific dataset index.
+    # ds = TextDetectionDataset(Types.english, Types.train, Types.db, 640, 640)
+    # ds = TextRecognitionDataset(Types.english, Types.train, Types.crnn, 32, 160)
+    # dataset_tester("", ds)
+    # print(ds[])
+
+    for dataset_class, model_name, height, width in datasets:
+        for lang, data_type in types:
+            ds = dataset_class(lang, data_type, model_name, height, width)
+            dataset_tester(lang, ds)
 
 
 if __name__ == '__main__':
-    test_dataset()
+    test_datasets()

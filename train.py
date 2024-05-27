@@ -30,7 +30,7 @@ def train_text_detection(lang: Types.Language) -> None:
     logger.info(f"Loading Completed... Dataset Size Train: {len(train_ds):,}, Val: {len(val_ds):,}")
     visualize_dataset(train_ds)
 
-    model_params = {"name": model_name, "backbone": backbone, "pretrained": True}
+    model_params = {"name": model_name, "backbone": backbone, "pretrained": False}
     model = DB(model_params)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     lr_scheduler = ReduceLROnPlateau(optimizer, patience=patience)

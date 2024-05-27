@@ -1,3 +1,4 @@
+import math
 from pathlib import Path
 from typing import NewType, Iterable, Generator
 
@@ -134,3 +135,21 @@ def read_chars(lang: Types.Language) -> str:
     alphabet_file = Path(__file__).parent.parent / f"models/recognition/alphabets/{lang}.txt"
     alphabet = " " + "".join([line.rstrip("\n") for line in alphabet_file.read_text(encoding="utf-8")])
     return alphabet
+
+
+def rect_corners(x: float, y: float, width: float, height: float, theta: float) -> tuple:
+    """
+    Use given args to generate rectangle corners along with the rotation.
+    """
+
+    def xy_rotate(theta_: float, x_: float, y_: float, cx_: float, cy_: float) -> tuple:
+        rotated_x = math.cos(theta_) * (x_ - cx_) - math.sin(theta_) * (y_ - cy_)
+        rotated_y = math.cos(theta_) * (y_ - cy_) + math.sin(theta_) * (x_ - cx_)
+        return cx_ + rotated_x, cy_ + rotated_y
+
+    cx, cy = x + width / 2, y + height / 2
+    x1, y1 = xy_rotate(theta, x, y, cx, cy)
+    x2, y2 = xy_rotate(theta, x + width, y, cx, cy)
+    x3, y3 = xy_rotate(theta, x, y + height, cx, cy)
+    x4, y4 = xy_rotate(theta, x + width, y + height, cx, cy)
+    return (x1, y1), (x3, y3), (x4, y4), (x2, y2)
