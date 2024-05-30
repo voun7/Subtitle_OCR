@@ -4,7 +4,7 @@ import numpy as np
 from utilities.utils import read_image, rescale, pascal_voc_bb, flatten_iter, crop_image
 
 
-def get_scale_factor(img_frame: np.ndarray, img_target_height: int = 700) -> float:
+def get_scale_factor(img_frame: np.ndarray, img_target_height: int = 600) -> float:
     img_height = img_frame.shape[0]
     if img_height > img_target_height:
         rescale_factor = img_target_height / img_height

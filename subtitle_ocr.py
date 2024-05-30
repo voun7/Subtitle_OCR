@@ -1,6 +1,7 @@
 import logging
 from pathlib import Path
 
+import numpy as np
 import torch
 
 from models.detection.db import DB, DBPostProcess
@@ -42,16 +43,36 @@ class SubtitleOCR:
         return model, post_processor, image_height, image_weight
 
     @staticmethod
-    def sort_merge_bboxes(bboxes, scores) -> list:
+    def sort_merge_bboxes(bboxes: np.array, scores: np.array, threshold: int = 5) -> list:
         """
         Sort and merge bboxes that are very close and on the same horizontal line to create larger bboxes.
+        The y-coordinates is used because bounding boxes that are aligned horizontally will have similar y-coordinates.
         e.g, Single word bboxes that are close to each other would merge together to form a bbox containing a sentence.
         """
-        # todo: Fully implement this function.
-        labels = [{"bbox": bbox.tolist()} for bbox, score in zip(bboxes, scores) if score]
-        return labels
 
-    def text_detector(self, image, image_height: int, image_width: int) -> list:
+        def merge(bboxes_: np.array) -> tuple:
+            n_x1, n_y1 = np.min(bboxes_[:, 0], axis=0)
+            n_x2, n_y2 = np.max(bboxes_[:, 1], axis=0)
+            n_x3, n_y3 = np.max(bboxes_[:, 2], axis=0)
+            n_x4, n_y4 = np.min(bboxes_[:, 3], axis=0)
+            return (n_x1, n_y1), (n_x2, n_y2), (n_x3, n_y3), (n_x4, n_y4)
+
+        # Remove bbox indexes with a score of zero.
+        bboxes = bboxes[scores > 0]
+        # Calculate the average y-coordinate for each bbox
+        avg_y = np.mean(bboxes[:, :, 1], axis=1)
+        # Sort the bounding boxes by their average y-coordinate
+        sorted_indices = np.argsort(avg_y)
+        sorted_bboxes, sorted_avg_y = bboxes[sorted_indices], avg_y[sorted_indices]
+        # Find the differences between consecutive average y-coordinates
+        diff_y = np.diff(sorted_avg_y, prepend=sorted_avg_y[0])
+        # Identify groups based on the threshold
+        group_labels = np.cumsum(diff_y > threshold)
+        # Use advanced indexing to group bounding boxes
+        groups = [sorted_bboxes[group_labels == i] for i in np.unique(group_labels)]
+        return [{"bbox": merge(bbs)} for bbs in groups]
+
+    def text_detector(self, image: np.array, image_height: int, image_width: int) -> list:
         tensor_image = resize_norm_img(image, self.det_img_h, self.det_img_w, False)[0]
         tensor_image = torch.from_numpy(tensor_image).to(self.device)
         prediction = self.det_model(tensor_image.unsqueeze(0))
@@ -60,8 +81,8 @@ class SubtitleOCR:
         labels = self.sort_merge_bboxes(bboxes[0], scores[0])
         return labels
 
-    def text_recognizer(self, image, labels: list) -> list:
-        def recognizer(img) -> tuple:
+    def text_recognizer(self, image: np.array, labels: list) -> list:
+        def recognizer(img: np.array) -> tuple:
             img = resize_norm_img(img, self.rec_img_h, img.shape[1])[0]
             tensor_image = torch.from_numpy(img).to(self.device)
             prediction = self.rec_model(tensor_image.unsqueeze(0))
@@ -88,7 +109,7 @@ class SubtitleOCR:
 def test_ocr() -> None:
     test_sub_ocr = SubtitleOCR()
     test_image_file = r"C:\Users\Victor\OneDrive\Public\test img1.png"
-    test_outputs = test_sub_ocr.ocr(test_image_file, rec=False)
+    test_outputs = test_sub_ocr.ocr(test_image_file)
     for output in test_outputs:
         logger.info(output)
     visualize_data(test_image_file, test_outputs, False, True)

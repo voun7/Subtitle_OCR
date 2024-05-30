@@ -9,7 +9,7 @@ class DBPostProcess:
     The post process for Differentiable Binarization (DB).
     """
 
-    def __init__(self, thresh=0.3, box_thresh=0.7, max_candidates=1000, un_clip_ratio=1.5):
+    def __init__(self, thresh=0.3, box_thresh=0.7, max_candidates=1000, un_clip_ratio=2):
         self.thresh = thresh
         self.box_thresh = box_thresh
         self.max_candidates = max_candidates
@@ -134,7 +134,7 @@ class DBPostProcess:
         return boxes, scores
 
     @staticmethod
-    def un_clip(box, un_clip_ratio=1.5):
+    def un_clip(box, un_clip_ratio):
         poly = Polygon(box)
         distance = poly.area * un_clip_ratio / poly.length
         offset = pyclipper.PyclipperOffset()
