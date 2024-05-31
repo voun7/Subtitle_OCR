@@ -22,7 +22,7 @@ class ModelTrainer:
         The trainer supports optional use of metrics that should be a dictionary.
         """
         self.use_cuda = torch.cuda.is_available()
-        self.device = 'cuda' if self.use_cuda else 'cpu'
+        self.device = "cuda" if self.use_cuda else "cpu"
         self.model = self.init_model(model)
         self.loss_fn, self.metrics_fn, self.optimizer = params["loss_fn"], params.get("metrics_fn"), params["optimizer"]
         self.lr_scheduler, self.num_epochs = params["lr_scheduler"], params["num_epochs"]
@@ -85,7 +85,7 @@ class ModelTrainer:
             loss = self.loss_fn(outputs, batch)
             metric = self.compute_metrics(outputs, batch)
             # Step 3 - Computes gradients for both "x" and "y" parameters
-            loss['loss'].backward()
+            loss["loss"].backward()
             # Step 4 - Updates parameters using gradients and the learning rate
             self.optimizer.step()
             self.optimizer.zero_grad()
@@ -130,7 +130,7 @@ class ModelTrainer:
         for key, value in dict_1.items():
             if isinstance(value, torch.Tensor):
                 value = value.item()
-            dict_1[key] = round(value, 3)
+            dict_1[key] = round(value, 4)
             dict_2.setdefault(key, []).append(value)
 
     def _mini_batch(self, validation: bool = False) -> tuple[dict, dict | None]:
@@ -184,7 +184,7 @@ class ModelTrainer:
         get current learning rate
         """
         for param_group in self.optimizer.param_groups:
-            return param_group['lr']
+            return param_group["lr"]
 
     @staticmethod
     def clear_previous_print() -> None:
@@ -265,12 +265,12 @@ class ModelTrainer:
         Builds dictionary with all elements for resuming training.
         """
         checkpoint = {
-            'epoch': self.total_epochs,
-            'model_state_dict': self.model.state_dict(), 'optimizer_state_dict': self.optimizer.state_dict(),
-            'loss': self.losses, 'val_loss': self.val_losses, 'best_loss': self.best_loss
+            "epoch": self.total_epochs,
+            "model_state_dict": self.model.state_dict(), "optimizer_state_dict": self.optimizer.state_dict(),
+            "loss": self.losses, "val_loss": self.val_losses, "best_loss": self.best_loss
         }
         if self.metrics_fn:
-            checkpoint.update({'metrics': self.metrics, 'val_metrics': self.val_metrics})
+            checkpoint.update({"metrics": self.metrics, "val_metrics": self.val_metrics})
         torch.save(checkpoint, self.model_dir.joinpath(f"{self.model_filename} (checkpoint) ({self.best_loss}).pt"))
 
     def load_checkpoint(self, model_checkpoint_file: str) -> None:
@@ -281,15 +281,15 @@ class ModelTrainer:
         # Loads dictionary
         checkpoint = torch.load(model_checkpoint_file)
         # Restore state for model and optimizer
-        self.model.load_state_dict(checkpoint['model_state_dict'])
-        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        self.model.load_state_dict(checkpoint["model_state_dict"])
+        self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
-        self.total_epochs = checkpoint['epoch']
-        self.losses, self.val_losses = checkpoint['loss'], checkpoint['val_loss']
-        self.best_loss = checkpoint['best_loss']
+        self.total_epochs = checkpoint["epoch"]
+        self.losses, self.val_losses = checkpoint["loss"], checkpoint["val_loss"]
+        self.best_loss = checkpoint["best_loss"]
         met_p = ''  # Metrics Print
         if self.metrics_fn:
-            self.metrics, self.val_metrics = checkpoint['metrics'], checkpoint['val_metrics']
+            self.metrics, self.val_metrics = checkpoint["metrics"], checkpoint["val_metrics"]
             met_p = f"\nMetric Keys: {list(self.metrics)},\nVal Metric Keys: {list(self.val_metrics)}\n"
         self.num_epochs += self.total_epochs  # update the overall number of epochs
         logger.info(f"Model Checkpoint Loaded: Model Params No: {len(list(self.model.named_parameters()))},\n"
@@ -315,9 +315,9 @@ def plot_checkpoint(model_checkpoint_file: str) -> None:
     """
     writer, checkpoint = SummaryWriter(comment="checkpoint_plt"), torch.load(model_checkpoint_file)
 
-    total_epochs = checkpoint['epoch']
-    losses, val_losses, best_loss = checkpoint['loss'], checkpoint['val_loss'], checkpoint.get('best_loss')
-    metrics, val_metrics = checkpoint.get('metrics'), checkpoint.get('val_metrics')
+    total_epochs = checkpoint["epoch"]
+    losses, val_losses, best_loss = checkpoint["loss"], checkpoint["val_loss"], checkpoint.get("best_loss")
+    metrics, val_metrics = checkpoint.get("metrics"), checkpoint.get("val_metrics")
     if metrics and val_metrics:
         losses.update(metrics), val_losses.update(val_metrics)
     train_keys, val_keys = list(losses), list(val_losses)

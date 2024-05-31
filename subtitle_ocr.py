@@ -43,7 +43,7 @@ class SubtitleOCR:
         return model, post_processor, image_height, image_weight
 
     @staticmethod
-    def sort_merge_bboxes(bboxes: np.array, scores: np.array, threshold: int = 5) -> list:
+    def sort_merge_bboxes(bboxes: np.array, threshold: int = 5) -> list:
         """
         Sort and merge bboxes that are very close and on the same horizontal line to create larger bboxes.
         The y-coordinates is used because bounding boxes that are aligned horizontally will have similar y-coordinates.
@@ -57,8 +57,6 @@ class SubtitleOCR:
             n_x4, n_y4 = np.min(bboxes_[:, 3], axis=0)
             return (n_x1, n_y1), (n_x2, n_y2), (n_x3, n_y3), (n_x4, n_y4)
 
-        # Remove bbox indexes with a score of zero.
-        bboxes = bboxes[scores > 0]
         # Calculate the average y-coordinate for each bbox
         avg_y = np.mean(bboxes[:, :, 1], axis=1)
         # Sort the bounding boxes by their average y-coordinate
@@ -78,7 +76,9 @@ class SubtitleOCR:
         prediction = self.det_model(tensor_image.unsqueeze(0))
         batch = {"shape": [(image_height, image_width)]}
         bboxes, scores = self.det_post_process(batch, prediction)
-        labels = self.sort_merge_bboxes(bboxes[0], scores[0])
+        bboxes = bboxes[0][scores[0] > 0]  # Remove bbox indexes with a score of zero.
+        labels = self.sort_merge_bboxes(bboxes)
+        # labels = [{"bbox": bb.tolist()} for bb in bboxes]  # to be removed later
         return labels
 
     def text_recognizer(self, image: np.array, labels: list) -> list:

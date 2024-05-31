@@ -411,7 +411,6 @@ def load_data(lang: Types.Language, model_type: Types.ModelType, data_type: Type
         if model_type == Types.det:
             return merge_data_sources(
                 ICDAR2015Data(data_type),
-                ICDAR2019LSVTFullData(data_type),
                 MSRATD500(data_type),
                 SynthTextData(data_type),
                 TextOCR01Data(data_type)
