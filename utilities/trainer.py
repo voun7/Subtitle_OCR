@@ -37,11 +37,6 @@ class ModelTrainer:
         self.metrics, self.val_metrics = {}, {}
         self.total_epochs, self.epoch_stop = 0, self.num_epochs
 
-        # Creates the train_step function for our model, loss function and optimizer
-        self.train_step_fn = self._make_train_step_fn()
-        # Creates the val_step function for our model and loss
-        self.val_step_fn = self._make_val_step_fn()
-
     def init_model(self, model):
         if self.use_cuda:
             device_count = torch.cuda.device_count()
@@ -67,53 +62,40 @@ class ModelTrainer:
         self.train_loader = self.init_dataloader(train_ds, batch_size, num_workers, True)
         self.val_loader = self.init_dataloader(val_ds, val_batch_size, num_workers, False)
 
-    def _make_train_step_fn(self):
+    def train_step_fn(self, images: torch.Tensor, batch: dict) -> tuple[dict, dict | None]:
         """
-        Builds function that performs a step in the train loop.
-        :return: The function that will be called inside the train loop.
+        Function that performs a step in the train loop.
+        :param images: Image Tensors
+        :param batch: A dictionary with tensor values.
+        :return: A loss dict and a metric dict.
         """
+        # Step 1 - Computes our model's predicted outputs - forward pass
+        outputs = self.model(images)
+        # Step 2 - Computes the loss and metrics
+        loss = self.loss_fn(outputs, batch)
+        metric = self.compute_metrics(outputs, batch)
+        # Step 3 - Computes gradients for both "x" and "y" parameters
+        loss["loss"].backward()
+        # Step 4 - Updates parameters using gradients and the learning rate
+        self.optimizer.step()
+        self.optimizer.zero_grad()
+        # Returns the loss and metrics
+        return loss, metric
 
-        def perform_train_step_fn(images: torch.Tensor, batch: dict) -> tuple[dict, dict | None]:
-            """
-            :param images: Image Tensors
-            :param batch: A dictionary with tensor values.
-            :return: A loss dict and a metric dict.
-            """
-            # Step 1 - Computes our model's predicted outputs - forward pass
-            outputs = self.model(images)
-            # Step 2 - Computes the loss and metrics
-            loss = self.loss_fn(outputs, batch)
-            metric = self.compute_metrics(outputs, batch)
-            # Step 3 - Computes gradients for both "x" and "y" parameters
-            loss["loss"].backward()
-            # Step 4 - Updates parameters using gradients and the learning rate
-            self.optimizer.step()
-            self.optimizer.zero_grad()
-            # Returns the loss and metrics
-            return loss, metric
-
-        return perform_train_step_fn
-
-    def _make_val_step_fn(self):
+    def val_step_fn(self, images: torch.Tensor, batch: dict) -> tuple[dict, dict | None]:
         """
-        Builds function that performs a step in the validation loop.
+        Function that performs a step in the validation loop.
+        :param images: Image Tensors
+        :param batch: A dictionary with tensor values.
+        :return: A loss dict and a metric dict.
         """
-
-        def perform_val_step_fn(images: torch.Tensor, batch: dict) -> tuple[dict, dict | None]:
-            """
-            :param images: Image Tensors
-            :param batch: A dictionary with tensor values.
-            :return: A loss dict and a metric dict.
-            """
-            # Step 1 - Computes our model's predicted outputs - forward pass
-            outputs = self.model(images)
-            # Step 2 - Computes the loss and metrics
-            loss = self.loss_fn(outputs, batch)
-            metric = self.compute_metrics(outputs, batch, True)
-            # There is no need to compute Steps 3 and 4, since we don't update parameters during evaluation
-            return loss, metric
-
-        return perform_val_step_fn
+        # Step 1 - Computes our model's predicted outputs - forward pass
+        outputs = self.model(images)
+        # Step 2 - Computes the loss and metrics
+        loss = self.loss_fn(outputs, batch)
+        metric = self.compute_metrics(outputs, batch, True)
+        # There is no need to compute Steps 3 and 4, since we don't update parameters during evaluation
+        return loss, metric
 
     def dict_to_device(self, batch: dict) -> None:
         for key, value in batch.items():
@@ -151,9 +133,9 @@ class ModelTrainer:
             self.append_dict_val(mini_batch_loss, mini_batch_losses)
             if self.metrics_fn:
                 self.append_dict_val(mini_batch_metric, mini_batch_metrics)
-            pos = (self.total_epochs + (index + 1) / num_of_batches)
+            pos = self.total_epochs + (index + 1) / num_of_batches
             metric_txt = f" Metric: {mini_batch_metric}," if self.metrics_fn else ""
-            print(f"\rEpoch: {pos:.3f}, Batch {mode}{metric_txt} Loss: {mini_batch_loss}", end='', flush=True)
+            print(f"\rEpoch: {pos:.3f}, Batch {mode}{metric_txt} Loss: {mini_batch_loss}", end="", flush=True)
 
             # break the loop in case of sanity check
             if self.sanity_check is True:
@@ -287,7 +269,7 @@ class ModelTrainer:
         self.total_epochs = checkpoint["epoch"]
         self.losses, self.val_losses = checkpoint["loss"], checkpoint["val_loss"]
         self.best_loss = checkpoint["best_loss"]
-        met_p = ''  # Metrics Print
+        met_p = ""  # Metrics Print
         if self.metrics_fn:
             self.metrics, self.val_metrics = checkpoint["metrics"], checkpoint["val_metrics"]
             met_p = f"\nMetric Keys: {list(self.metrics)},\nVal Metric Keys: {list(self.val_metrics)}\n"
@@ -298,13 +280,12 @@ class ModelTrainer:
         logger.debug(f"Checkpoint Loss & Metric Values:\n{self.losses = },\n{self.val_losses = },\n{self.metrics = },\n"
                      f"{self.val_metrics = }")
 
-    def save_model(self, last_val_loss: float = None) -> None:
+    def save_model(self, last_val_loss: float) -> None:
         """
         Save the model state and checkpoint from the last epoch.
         :param last_val_loss: Value of validation loss in the last epoch.
         """
-        last_val_loss = f" ({last_val_loss})" if last_val_loss else ""
-        model_name = self.model_dir.joinpath(f"{self.model_filename}{last_val_loss}.pt")
+        model_name = self.model_dir.joinpath(f"{self.model_filename} ({last_val_loss}).pt")
         torch.save(self.model.state_dict(), model_name)
         logger.info(f"Model Saved! Name: {model_name}")
 
@@ -314,7 +295,6 @@ def plot_checkpoint(model_checkpoint_file: str) -> None:
     Use data from model checkpoint to plot the data recorded during training.
     """
     writer, checkpoint = SummaryWriter(comment="checkpoint_plt"), torch.load(model_checkpoint_file)
-
     total_epochs = checkpoint["epoch"]
     losses, val_losses, best_loss = checkpoint["loss"], checkpoint["val_loss"], checkpoint.get("best_loss")
     metrics, val_metrics = checkpoint.get("metrics"), checkpoint.get("val_metrics")
