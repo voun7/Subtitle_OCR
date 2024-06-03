@@ -43,14 +43,14 @@ class SubtitleOCR:
         return model, post_processor, image_height, image_weight
 
     @staticmethod
-    def sort_merge_bboxes(bboxes: np.array, threshold: int = 5) -> list:
+    def sort_merge_bboxes(bboxes: np.ndarray, threshold: int = 5) -> list:
         """
         Sort and merge bboxes that are very close and on the same horizontal line to create larger bboxes.
         The y-coordinates is used because bounding boxes that are aligned horizontally will have similar y-coordinates.
         e.g, Single word bboxes that are close to each other would merge together to form a bbox containing a sentence.
         """
 
-        def merge(bboxes_: np.array) -> tuple:
+        def merge(bboxes_: np.ndarray) -> tuple:
             n_x1, n_y1 = np.min(bboxes_[:, 0], axis=0)
             n_x2, n_y2 = np.max(bboxes_[:, 1], axis=0)
             n_x3, n_y3 = np.max(bboxes_[:, 2], axis=0)
@@ -70,22 +70,22 @@ class SubtitleOCR:
         groups = [sorted_bboxes[group_labels == i] for i in np.unique(group_labels)]
         return [{"bbox": merge(bbs)} for bbs in groups]
 
-    def text_detector(self, image: np.array, image_height: int, image_width: int) -> list:
-        tensor_image = resize_norm_img(image, self.det_img_h, self.det_img_w, False)[0]
-        tensor_image = torch.from_numpy(tensor_image).to(self.device)
-        prediction = self.det_model(tensor_image.unsqueeze(0))
+    def text_detector(self, image: np.ndarray, image_height: int, image_width: int) -> list:
+        image = resize_norm_img(image, self.det_img_h, self.det_img_w, False)[0]
+        image = torch.from_numpy(image).to(self.device)
+        prediction = self.det_model(image.unsqueeze(0))
         batch = {"shape": [(image_height, image_width)]}
         bboxes, scores = self.det_post_process(batch, prediction)
         bboxes = bboxes[0][scores[0] > 0]  # Remove bbox indexes with a score of zero.
-        labels = self.sort_merge_bboxes(bboxes)
+        labels = self.sort_merge_bboxes(bboxes) if bboxes.size else []
         # labels = [{"bbox": bb.tolist()} for bb in bboxes]  # to be removed later
         return labels
 
-    def text_recognizer(self, image: np.array, labels: list) -> list:
-        def recognizer(img: np.array) -> tuple:
+    def text_recognizer(self, image: np.ndarray, labels: list) -> list:
+        def recognizer(img: np.ndarray) -> tuple:
             img = resize_norm_img(img, self.rec_img_h, img.shape[1])[0]
-            tensor_image = torch.from_numpy(img).to(self.device)
-            prediction = self.rec_model(tensor_image.unsqueeze(0))
+            img = torch.from_numpy(img).to(self.device)
+            prediction = self.rec_model(img.unsqueeze(0))
             text, score = self.rec_post_process(prediction)
             return text, score
 
@@ -119,4 +119,4 @@ if __name__ == '__main__':
     setup_logging()
     logger.debug("Logging Started")
     test_ocr()
-    logger.debug("Logging Ended")
+    logger.debug("Logging Ended\n\n")
