@@ -108,7 +108,7 @@ class SubtitleOCR:
 
 def test_ocr() -> None:
     test_sub_ocr = SubtitleOCR()
-    test_image_file = r"C:\Users\Victor\OneDrive\Public\test img1.png"
+    test_image_file = r"C:\Users\Victor\OneDrive\Public\test images\test img1.jpg"
     test_outputs = test_sub_ocr.ocr(test_image_file)
     for output in test_outputs:
         logger.info(output)

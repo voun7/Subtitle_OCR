@@ -74,8 +74,7 @@ def rescale(scale: float, frame: np.ndarray = None, bbox: tuple = None) -> np.nd
     Bbox is returned as an integer. This function should be used only for visualization.
     """
     if frame is not None:
-        width, height = int(frame.shape[1] * scale), int(frame.shape[0] * scale)
-        return cv.resize(frame, (width, height))
+        return cv.resize(frame, None, fx=scale, fy=scale)
 
     if bbox:
         return tuple(map(lambda c: c * scale, bbox))
@@ -102,30 +101,21 @@ def crop_image(image: np.ndarray, image_height: int, image_width: int, bbox: tup
     return blank_image, cropped_image
 
 
-def resize_norm_img(image: np.ndarray, new_height: int, new_width: int, pad: bool = True) -> tuple:
+def resize_norm_img(image: np.ndarray, target_height: int, target_width: int, pad: bool = True) -> tuple:
     """
     Image scaling and normalization
     :return: resized normalized image and the rescale value
     """
-    # Get the dimensions of the original image
-    original_height, original_width, _ = image.shape
-    # Calculate aspect ratios
-    original_aspect_ratio, new_aspect_ratio = original_width / original_height, new_width / new_height
-    # Calculate scaling factor
-    if original_aspect_ratio > new_aspect_ratio:
-        scaling_factor = new_width / original_width
-    else:
-        scaling_factor = new_height / original_height
+    # Calculate the scaling factor to resize the image
+    scale = min(target_height / image.shape[0], target_width / image.shape[1])
     # Resize the image while maintaining aspect ratio
-    resize_h, resize_w = max(int(original_height * scaling_factor), 1), max(int(original_width * scaling_factor), 1)
-    resized_image = cv.resize(image, (resize_w, resize_h))
+    resized_image = cv.resize(image, None, fx=scale, fy=scale)
     if pad:  # Add padding if requested
-        pad_height, pad_width = new_height - resize_h, new_width - resize_w
-        resized_image = cv.copyMakeBorder(resized_image, 0, pad_height, 0, pad_width, cv.BORDER_CONSTANT,
-                                          value=(0, 0, 0))
+        pad_h, pad_w = target_height - resized_image.shape[0], target_width - resized_image.shape[1]
+        resized_image = cv.copyMakeBorder(resized_image, 0, pad_h, 0, pad_w, cv.BORDER_CONSTANT, value=(0, 0, 0))
     normalized_image = cv.normalize(resized_image, None, norm_type=cv.NORM_MINMAX, dtype=cv.CV_32F)
     image = np.moveaxis(normalized_image, -1, 0)  # change image data format from [H, W, C] to [C, H, W]
-    return image, scaling_factor
+    return image, scale
 
 
 def read_chars(lang: Types.Language) -> str:
