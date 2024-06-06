@@ -17,7 +17,7 @@ class SubtitleOCR:
 
     def __init__(self, lang: Types.Language = Types.english) -> None:
         self.models_dir = Path(r"C:\Users\Victor\OneDrive\Backups\Subtitle OCR Models")
-        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
         self.det_model, self.det_post_process, self.det_img_h, self.det_img_w = self.init_model(lang)
         self.rec_model, self.rec_post_process, self.rec_img_h, _ = self.init_model(lang, Types.rec)

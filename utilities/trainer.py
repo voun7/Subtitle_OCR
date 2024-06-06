@@ -272,11 +272,11 @@ class ModelTrainer:
         met_p = ""  # Metrics Print
         if self.metrics_fn:
             self.metrics, self.val_metrics = checkpoint["metrics"], checkpoint["val_metrics"]
-            met_p = f"\nMetric Keys: {list(self.metrics)},\nVal Metric Keys: {list(self.val_metrics)}\n"
+            met_p = f"\nMetric Keys: {list(self.metrics)}\nVal Metric Keys: {list(self.val_metrics)}\n"
         self.num_epochs += self.total_epochs  # update the overall number of epochs
         logger.info(f"Model Checkpoint Loaded: Model Params No: {len(list(self.model.named_parameters()))},\n"
                     f"Optimizer: {self.optimizer},\nTotal Epochs: {self.total_epochs}, Best Loss: {self.best_loss}\n"
-                    f"Loss Keys: {list(self.losses)},\nVal Loss Keys: {list(self.val_losses)}{met_p}")
+                    f"Loss Keys: {list(self.losses)}\nVal Loss Keys: {list(self.val_losses)}{met_p}")
         logger.debug(f"Checkpoint Loss & Metric Values:\n{self.losses = },\n{self.val_losses = },\n{self.metrics = },\n"
                      f"{self.val_metrics = }")
 

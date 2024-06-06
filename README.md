@@ -27,5 +27,9 @@ pip install opencv-python
 ```
 
 ```commandline
+pip install shapely
+```
+
+```commandline
 pip install pyclipper
 ```
