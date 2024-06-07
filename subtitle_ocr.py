@@ -43,7 +43,7 @@ class SubtitleOCR:
         return model, post_processor, image_height, image_weight
 
     @staticmethod
-    def sort_merge_bboxes(bboxes: np.ndarray, threshold: int = 5) -> list:
+    def sort_merge_bboxes(bboxes: np.ndarray, threshold: int = 10) -> list:
         """
         Sort and merge bboxes that are very close and on the same horizontal line to create larger bboxes.
         The y-coordinates is used because bounding boxes that are aligned horizontally will have similar y-coordinates.
@@ -83,7 +83,7 @@ class SubtitleOCR:
 
     def text_recognizer(self, image: np.ndarray, labels: list) -> list:
         def recognizer(img: np.ndarray) -> tuple:
-            img = resize_norm_img(img, self.rec_img_h, img.shape[1])[0]
+            img = resize_norm_img(img, self.rec_img_h, img.shape[1], img.shape[0] < self.rec_img_h)[0]
             img = torch.from_numpy(img).to(self.device)
             prediction = self.rec_model(img.unsqueeze(0))
             text, score = self.rec_post_process(prediction)
