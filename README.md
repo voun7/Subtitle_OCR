@@ -14,22 +14,6 @@ The training data is optimized for subtitle text images.
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 ```
 
-For Training
-
 ```commandline
 pip install -r requirements.txt
-```
-
-For OCR
-
-```commandline
-pip install opencv-python
-```
-
-```commandline
-pip install shapely
-```
-
-```commandline
-pip install pyclipper
 ```
