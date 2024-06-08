@@ -108,11 +108,14 @@ class SubtitleOCR:
 
 def test_ocr() -> None:
     test_sub_ocr = SubtitleOCR()
-    test_image_file = r"C:\Users\Victor\OneDrive\Public\test images\test img1.jpg"
-    test_outputs = test_sub_ocr.ocr(test_image_file)
-    for output in test_outputs:
-        logger.info(output)
-    visualize_data(test_image_file, test_outputs, False, True)
+    test_image_files = Path(r"C:\Users\Victor\OneDrive\Public\test images")
+    for test_image in test_image_files.iterdir():
+        test_outputs = test_sub_ocr.ocr(str(test_image))
+        logger.info(test_image)
+        for test_output in test_outputs:
+            logger.info(test_output)
+        logger.info("")
+        visualize_data(str(test_image), test_outputs, False, True)
 
 
 if __name__ == '__main__':
