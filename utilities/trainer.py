@@ -163,10 +163,17 @@ class ModelTrainer:
 
     def get_lr(self) -> float:
         """
-        get current learning rate
+        Get current learning rate of optimizer.
         """
         for param_group in self.optimizer.param_groups:
             return param_group["lr"]
+
+    def set_lr(self, new_learning_rate: float) -> None:
+        """
+        Set new learning rate for optimizer.
+        """
+        for param_group in self.optimizer.param_groups:
+            param_group["lr"] = new_learning_rate
 
     @staticmethod
     def clear_previous_print() -> None:
@@ -255,7 +262,7 @@ class ModelTrainer:
             checkpoint.update({"metrics": self.metrics, "val_metrics": self.val_metrics})
         torch.save(checkpoint, self.model_dir.joinpath(f"{self.model_filename} (checkpoint) ({self.best_loss}).pt"))
 
-    def load_checkpoint(self, model_checkpoint_file: str) -> None:
+    def load_checkpoint(self, model_checkpoint_file: str, new_learning_rate: float = None) -> None:
         if not model_checkpoint_file or not Path(model_checkpoint_file).exists():
             logger.warning("Checkpoint File Not Loaded or Does Not Exist.")
             return
@@ -265,6 +272,8 @@ class ModelTrainer:
         # Restore state for model and optimizer
         self.model.load_state_dict(checkpoint["model_state_dict"])
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        if new_learning_rate:
+            self.set_lr(new_learning_rate)
 
         self.total_epochs = checkpoint["epoch"]
         self.losses, self.val_losses = checkpoint["loss"], checkpoint["val_loss"]
