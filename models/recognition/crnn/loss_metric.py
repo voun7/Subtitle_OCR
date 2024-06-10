@@ -37,6 +37,4 @@ class CRNNMetrics:
             all_num += 1
         correct_num += correct_num
         all_num += all_num
-        if validation:
-            pass
         return {"accuracy": correct_num / all_num}

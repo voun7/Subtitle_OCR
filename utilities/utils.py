@@ -16,7 +16,6 @@ class Types:
     rec = ModelType("Recognition")
 
     db = ModelName("DB")
-    db_pp = ModelName("DB++")
     crnn = ModelName("CRNN")
 
     train = DataType("train")  # Training

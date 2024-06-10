@@ -1,4 +1,4 @@
-# CRNN (Convolutional Recurrent Neural Network)
+# Convolutional Recurrent Neural Network algorithm
 import torch.nn as nn
 
 

@@ -1,4 +1,4 @@
-import cv2
+import cv2 as cv
 import numpy as np
 import pyclipper
 from shapely.geometry import Polygon
@@ -60,11 +60,11 @@ class DBPostProcess:
         boxes = []
         scores = []
 
-        contours, _ = cv2.findContours((bitmap * 255).astype(np.uint8), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        contours, _ = cv.findContours((bitmap * 255).astype(np.uint8), cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
 
         for contour in contours[:self.max_candidates]:
-            epsilon = 0.002 * cv2.arcLength(contour, True)
-            approx = cv2.approxPolyDP(contour, epsilon, True)
+            epsilon = 0.002 * cv.arcLength(contour, True)
+            approx = cv.approxPolyDP(contour, epsilon, True)
             points = approx.reshape((-1, 2))
             if points.shape[0] < 4:
                 continue
@@ -103,7 +103,7 @@ class DBPostProcess:
         bitmap = _bitmap.cpu().numpy()  # The first channel
         prediction = prediction.cpu().detach().numpy()
         height, width = bitmap.shape
-        contours, _ = cv2.findContours((bitmap * 255).astype(np.uint8), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        contours, _ = cv.findContours((bitmap * 255).astype(np.uint8), cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
         num_contours = min(len(contours), self.max_candidates)
         boxes = np.zeros((num_contours, 4, 2), dtype=np.int16)
         scores = np.zeros((num_contours,), dtype=np.float32)
@@ -144,8 +144,8 @@ class DBPostProcess:
 
     @staticmethod
     def get_mini_boxes(contour):
-        bounding_box = cv2.minAreaRect(contour)
-        points = sorted(list(cv2.boxPoints(bounding_box)), key=lambda x: x[0])
+        bounding_box = cv.minAreaRect(contour)
+        points = sorted(list(cv.boxPoints(bounding_box)), key=lambda x: x[0])
 
         index_1, index_2, index_3, index_4 = 0, 1, 2, 3
         if points[1][1] > points[0][1]:
@@ -176,5 +176,5 @@ class DBPostProcess:
         mask = np.zeros((y_max - y_min + 1, x_max - x_min + 1), dtype=np.uint8)
         box[:, 0] = box[:, 0] - x_min
         box[:, 1] = box[:, 1] - y_min
-        cv2.fillPoly(mask, box.reshape(1, -1, 2).astype(np.int32), 1)
-        return cv2.mean(bitmap[y_min:y_max + 1, x_min:x_max + 1], mask)[0]
+        cv.fillPoly(mask, box.reshape(1, -1, 2).astype(np.int32), 1)
+        return cv.mean(bitmap[y_min:y_max + 1, x_min:x_max + 1], mask)[0]

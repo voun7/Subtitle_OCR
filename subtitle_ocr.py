@@ -28,7 +28,7 @@ class SubtitleOCR:
         """
         if model_type is Types.det:
             image_height, image_weight = 640, 640
-            model_params = {"name": Types.db, "backbone": "deformable_resnet50", "pretrained": False}
+            model_params = {"backbone": "deformable_resnet50", "pretrained": False}
             model, file = DB(model_params), next(self.models_dir.glob(f"{lang} DB deformable_resnet50 *.pt"))
             post_processor = DBPostProcess()
         else:

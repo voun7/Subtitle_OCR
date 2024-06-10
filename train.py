@@ -30,8 +30,7 @@ def train_text_detection(lang: Types.Language) -> None:
     logger.info(f"Loading Completed... Dataset Size Train: {len(train_ds):,}, Val: {len(val_ds):,}")
     visualize_dataset(train_ds)
 
-    model_params = {"name": model_name, "backbone": backbone, "pretrained": False}
-    model = DB(model_params)
+    model = DB({"backbone": backbone, "pretrained": False})
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     lr_scheduler = ReduceLROnPlateau(optimizer, patience=patience)
     train_params = {
@@ -62,8 +61,7 @@ def train_text_recognition(lang: Types.Language) -> None:
     visualize_dataset(train_ds)
 
     alphabet = read_chars(lang)
-    model_params = {"image_height": image_height, "channel_size": 3, "num_class": len(alphabet) + 1}
-    model = CRNN(**model_params)
+    model = CRNN(**{"image_height": image_height, "channel_size": 3, "num_class": len(alphabet) + 1})
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     lr_scheduler = ReduceLROnPlateau(optimizer, patience=patience)
     train_params = {
