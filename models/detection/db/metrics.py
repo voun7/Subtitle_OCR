@@ -1,8 +1,8 @@
 import numpy as np
 import torch
 
-from models.detection.db.iou import DetectionIoUEvaluator
-from models.detection.db.post_process import DBPostProcess
+from .iou import DetectionIoUEvaluator
+from .post_process import DBPostProcess
 
 
 class AverageMeter:

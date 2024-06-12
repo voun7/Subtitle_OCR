@@ -17,6 +17,7 @@ class Types:
 
     db = ModelName("DB")
     crnn = ModelName("CRNN")
+    svtr = ModelName("SVTR")
 
     train = DataType("train")  # Training
     val = DataType("val")  # Validation

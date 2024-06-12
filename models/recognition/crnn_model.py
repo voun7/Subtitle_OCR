@@ -1,4 +1,5 @@
-# Convolutional Recurrent Neural Network algorithm
+# Convolutional Recurrent Neural Network algorithm  https://arxiv.org/abs/1507.05717
+import torch
 import torch.nn as nn
 
 
@@ -21,13 +22,13 @@ class BidirectionalLSTM(nn.Module):
 
 class CRNN(nn.Module):
 
-    def __init__(self, image_height, channel_size, num_class, hidden_size=256, n_rnn=2, leaky_relu=False):
+    def __init__(self, image_height: int, num_class: int, channel_size: int = 3, hidden_size: int = 256,
+                 leaky_relu: bool = False) -> None:
         """
         :param image_height: the height of the input image to network
         :param channel_size: the channel size of the input image
         :param num_class: the number of characters to recognize e.g. 26 for english alphabets
         :param hidden_size: size of the lstm hidden state
-        :param n_rnn:
         :param leaky_relu:
         """
         super().__init__()
@@ -70,12 +71,19 @@ class CRNN(nn.Module):
     def forward(self, input_):
         # conv features
         conv = self.cnn(input_)
-        b, c, h, w = conv.size()
+        b, c, h, w = conv.shape
         assert h == 1, "the height of conv must be 1"
         conv = conv.squeeze(2)  # [b, c, 1, w] -> [b, c, w]
         conv = conv.permute(2, 0, 1)  # [b, c, w] -> [w, b, c]
         # rnn features
         output = self.rnn(conv)
         # add log_softmax to converge output
-        output = nn.functional.log_softmax(output, 2)
+        output = output.log_softmax(2)
         return output
+
+
+if __name__ == '__main__':
+    test_img = torch.rand([4, 3, 32, 100])
+    test_model = CRNN(**{"image_height": 32, "num_class": 50})
+    test_output = test_model(test_img)
+    print(test_model), print(test_output), print(test_output.shape)

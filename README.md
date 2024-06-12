@@ -17,3 +17,13 @@ pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 ```commandline
 pip install -r requirements.txt
 ```
+
+### Build Package:
+
+```commandline
+pip install build
+```
+
+```commandline
+python -m build
+```

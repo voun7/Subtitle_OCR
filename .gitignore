@@ -1,5 +1,7 @@
 .idea
 logs
-/credentials/
-/runs/
-/saved models/
+credentials
+runs
+saved models
+dist
+Subtitle_OCR.egg-info

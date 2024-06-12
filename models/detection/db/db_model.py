@@ -1,4 +1,4 @@
-# Differentiable Binarization algorithm (Segmentation-based Text Detection)
+# Differentiable Binarization algorithm (Segmentation-based Text Detection)  https://arxiv.org/abs/1911.08947
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -100,7 +100,7 @@ class ConvBnRelu(nn.Module):
 
 
 class FPN(nn.Module):
-    def __init__(self, in_channels, inner_channels=256):
+    def __init__(self, in_channels, inner_channels):
         """
         Feature Pyramid Network, or FPN, is commonly used in convolutional networks to efficiently extract features of
         each dimension of an image.
@@ -144,11 +144,11 @@ class FPN(nn.Module):
 
     @staticmethod
     def _up_sample_add(x, y):
-        return F.interpolate(x, size=y.size()[2:]) + y
+        return F.interpolate(x, size=y.shape[2:]) + y
 
     @staticmethod
     def _up_sample_cat(p2, p3, p4, p5):
-        h, w = p2.size()[2:]
+        h, w = p2.shape[2:]
         p3 = F.interpolate(p3, size=(h, w))
         p4 = F.interpolate(p4, size=(h, w))
         p5 = F.interpolate(p5, size=(h, w))
@@ -168,18 +168,24 @@ class DB(nn.Module):
         'mobilenet_v3_large': {'models': mobilenet_v3_large, 'out': [24, 40, 160, 160]},
     }
 
-    def __init__(self, params):
+    def __init__(self, backbone_name: str, pretrained: bool) -> None:
         super().__init__()
-        backbone, pretrained = params['backbone'], params['pretrained']
-        backbone, backbone_out = self.backbones[backbone]["models"], self.backbones[backbone]["out"]
+        backbone, backbone_out = self.backbones[backbone_name]["models"], self.backbones[backbone_name]["out"]
         self.backbone = backbone(pretrained=pretrained)
-        self.segmentation_body = FPN(backbone_out, inner_channels=256)
+        self.segmentation_body = FPN(backbone_out, 256)
         self.segmentation_head = DBHead(self.segmentation_body.out_channels)
 
     def forward(self, x):
-        image_height, image_width = x.size()[2:]
+        image_height, image_width = x.shape[2:]
         backbone_out = self.backbone(x)
         segmentation_body_out = self.segmentation_body(backbone_out)
         segmentation_head_out = self.segmentation_head(segmentation_body_out)
         y = F.interpolate(segmentation_head_out, size=(image_height, image_width), mode='bilinear', align_corners=True)
         return y
+
+
+if __name__ == '__main__':
+    test_img = torch.rand([4, 3, 640, 640])
+    test_model = DB(**{"backbone_name": "deformable_resnet50", "pretrained": False})
+    test_output = test_model(test_img)
+    print(test_model), print(test_output), print(test_output.shape)

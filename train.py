@@ -4,8 +4,8 @@ import torch
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from data.build_dataset import TextDetectionDataset, TextRecognitionDataset
-from models.detection.db import DB, DBLoss, DBMetrics
-from models.recognition.crnn import CRNN, CRNNLoss, CRNNMetrics
+from models.detection import DB, DBLoss, DBMetrics
+from models.recognition import CRNN, CTCLoss, RecMetrics
 from utilities.logger_setup import setup_logging
 from utilities.telegram_bot import TelegramBot
 from utilities.trainer import ModelTrainer
@@ -22,15 +22,15 @@ def train_text_detection(lang: Types.Language) -> None:
     patience, learning_rate = 4, 0.001
     num_workers = 4
     model_name, backbone = Types.db, "deformable_resnet50"
-    image_height, image_width = 640, 640
+    image_h, image_w = 640, 640
 
     logger.info(f"Loading {lang} Text Detection Data...")
-    train_ds = TextDetectionDataset(lang, Types.train, model_name, image_height, image_width)
-    val_ds = TextDetectionDataset(lang, Types.val, model_name, image_height, image_width)
+    train_ds = TextDetectionDataset(lang, Types.train, model_name, image_h, image_w)
+    val_ds = TextDetectionDataset(lang, Types.val, model_name, image_h, image_w)
     logger.info(f"Loading Completed... Dataset Size Train: {len(train_ds):,}, Val: {len(val_ds):,}")
     visualize_dataset(train_ds)
 
-    model = DB({"backbone": backbone, "pretrained": False})
+    model = DB(**{"backbone_name": backbone, "pretrained": False})
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     lr_scheduler = ReduceLROnPlateau(optimizer, patience=patience)
     train_params = {
@@ -51,21 +51,21 @@ def train_text_recognition(lang: Types.Language) -> None:
     batch_size, val_batch_size = 256, 4096
     patience, learning_rate = 4, 0.0001
     num_workers = 2
-    model_name, backbone = Types.crnn, "ctc"
-    image_height, image_width = 32, 160
+    model_name, backbone = Types.crnn, ""
+    image_h, image_w = 32, 160
 
     logger.info(f"Loading {lang} Text Recognition Data...")
-    train_ds = TextRecognitionDataset(lang, Types.train, model_name, image_height, image_width)
-    val_ds = TextRecognitionDataset(lang, Types.val, model_name, image_height, image_width)
+    train_ds = TextRecognitionDataset(lang, Types.train, model_name, image_h, image_w)
+    val_ds = TextRecognitionDataset(lang, Types.val, model_name, image_h, image_w)
     logger.info(f"Loading Completed... Dataset Size Train: {len(train_ds):,}, Val: {len(val_ds):,}")
     visualize_dataset(train_ds)
 
     alphabet = read_chars(lang)
-    model = CRNN(**{"image_height": image_height, "channel_size": 3, "num_class": len(alphabet) + 1})
+    model = CRNN(**{"image_height": image_h, "num_class": len(alphabet) + 1})
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     lr_scheduler = ReduceLROnPlateau(optimizer, patience=patience)
     train_params = {
-        "loss_fn": CRNNLoss(alphabet), "metrics_fn": CRNNMetrics(alphabet), "optimizer": optimizer,
+        "loss_fn": CTCLoss(alphabet), "metrics_fn": RecMetrics(alphabet), "optimizer": optimizer,
         "lr_scheduler": lr_scheduler,
         "num_epochs": num_epochs,
         "sanity_check": False,

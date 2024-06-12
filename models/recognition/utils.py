@@ -1,9 +1,10 @@
 import torch
+import torch.nn as nn
 
 from utilities.utils import Types, read_chars
 
 
-class StrLabelConverter:
+class CTCStrLabelConverter:
     def __init__(self, alphabet: str, ignore_case: bool = False) -> None:
         """
         Convert between str and label. NOTE: Insert `blank` to the alphabet for CTC.
@@ -66,9 +67,9 @@ class StrLabelConverter:
             return texts
 
 
-class CRNNPostProcess:
+class LabelPostProcess:
     def __init__(self, alphabet: str) -> None:
-        self.converter = StrLabelConverter(alphabet)
+        self.converter = CTCStrLabelConverter(alphabet)
 
     def __call__(self, predictions: torch.Tensor) -> tuple:
         prediction_size = torch.LongTensor([predictions.size(0)] * predictions.size(1))
@@ -80,9 +81,45 @@ class CRNNPostProcess:
         return predictions, scores
 
 
+class CTCLoss(nn.Module):
+
+    def __init__(self, alphabet: str) -> None:
+        """
+        Calculate the loss using CTC Loss
+        """
+        super().__init__()
+        self.converter = CTCStrLabelConverter(alphabet)
+        self.loss_func = nn.CTCLoss(zero_infinity=True)
+
+    def forward(self, predictions: torch.Tensor, batch: dict) -> dict:
+        prediction_size = torch.LongTensor([predictions.size(0)] * predictions.size(1))
+        text, text_lengths = self.converter.encode(batch["text"])
+        loss = self.loss_func(predictions, text, prediction_size, text_lengths)
+        return {"loss": loss}
+
+
+class RecMetrics:
+    def __init__(self, alphabet: str, ignore_space: bool = False) -> None:
+        self.post_process = LabelPostProcess(alphabet)
+        self.ignore_space = ignore_space
+
+    def __call__(self, predictions: torch.Tensor, batch: dict, validation: bool) -> dict:
+        correct_num = all_num = 0
+        predictions = self.post_process(predictions)[0]
+        for prediction, text in zip(predictions, batch["text"]):
+            if self.ignore_space:
+                prediction, text = prediction.replace(" ", ""), text.replace(" ", "")
+            if prediction == text:
+                correct_num += 1
+            all_num += 1
+        correct_num += correct_num
+        all_num += all_num
+        return {"accuracy": correct_num / all_num}
+
+
 if __name__ == '__main__':
     test_alphabet = read_chars(Types.english)
-    test_conv = StrLabelConverter(test_alphabet)
+    test_conv = CTCStrLabelConverter(test_alphabet)
     test_encoded, test_len = test_conv.encode(["Testing 123", "Food", "Σ®ä", "aaa", "bbb", "ddΣ®äd", "123", "444"])
     print(test_encoded, test_len)
     print(test_conv.decode(test_encoded, test_len))

@@ -4,8 +4,8 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from models.detection.db import DB, DBPostProcess
-from models.recognition.crnn import CRNN, CRNNPostProcess
+from models.detection import DB, DBPostProcess
+from models.recognition import CRNN, LabelPostProcess
 from utilities.logger_setup import setup_logging
 from utilities.utils import Types, read_image, read_chars, resize_norm_img, pascal_voc_bb, flatten_iter
 from utilities.visualize import visualize_data
@@ -27,20 +27,20 @@ class SubtitleOCR:
         Setup model and post processor.
         """
         if model_type is Types.det:
-            image_height, image_weight = 640, 640
-            model_params = {"backbone": "deformable_resnet50", "pretrained": False}
-            model, file = DB(model_params), next(self.models_dir.glob(f"{lang} DB deformable_resnet50 *.pt"))
+            backbone, image_h, image_w = "deformable_resnet50", 640, 640
+            model_params = {"backbone_name": backbone, "pretrained": False}
+            model, file = DB(**model_params), next(self.models_dir.glob(f"{lang} {Types.db} {backbone} *.pt"))
             post_processor = DBPostProcess()
         else:
-            alphabet, image_height, image_weight = read_chars(lang), 32, None
-            model_params = {"image_height": image_height, "channel_size": 3, "num_class": len(alphabet) + 1}
-            model, file = CRNN(**model_params), next(self.models_dir.glob(f"{lang} CRNN ctc *.pt"))
-            post_processor = CRNNPostProcess(alphabet)
+            alphabet, backbone, image_h, image_w = read_chars(lang), "", 32, None
+            model_params = {"image_height": image_h, "num_class": len(alphabet) + 1}
+            model, file = CRNN(**model_params), next(self.models_dir.glob(f"{lang} {Types.crnn} {backbone} *.pt"))
+            post_processor = LabelPostProcess(alphabet)
 
         logger.debug(f"Device: {self.device}, Model Params: {model_params}, File: {file}")
         model.load_state_dict(torch.load(file))
         model.to(self.device).eval()
-        return model, post_processor, image_height, image_weight
+        return model, post_processor, image_h, image_w
 
     @staticmethod
     def sort_merge_bboxes(bboxes: np.ndarray, threshold: int = 10) -> list:
