@@ -1,4 +1,5 @@
 import logging
+import os
 from pathlib import Path
 
 import numpy as np
@@ -15,10 +16,8 @@ logger = logging.getLogger(__name__)
 
 class SubtitleOCR:
 
-    def __init__(self, lang: Types.Language = Types.english) -> None:
-        self.models_dir = Path(r"C:\Users\Victor\OneDrive\Backups\Subtitle OCR Models")
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-
+    def __init__(self, lang: Types.Language = Types.english, model_dir: Path = Path("saved models")) -> None:
+        self.models_dir, self.device = model_dir, "cuda" if torch.cuda.is_available() else "cpu"
         self.det_model, self.det_post_process, self.det_img_h, self.det_img_w = self.init_model(lang)
         self.rec_model, self.rec_post_process, self.rec_img_h, _ = self.init_model(lang, Types.rec)
 
@@ -26,6 +25,7 @@ class SubtitleOCR:
         """
         Setup model and post processor.
         """
+        assert self.models_dir.exists(), "Model save location not found!"
         if model_type is Types.det:
             backbone, image_h, image_w = "deformable_resnet50", 640, 640
             model_params = {"backbone_name": backbone, "pretrained": False}
@@ -107,8 +107,10 @@ class SubtitleOCR:
 
 
 def test_ocr() -> None:
-    test_sub_ocr = SubtitleOCR()
-    test_image_files = Path(r"C:\Users\Victor\OneDrive\Public\test images")
+    username = os.getlogin()
+    models_dir = Path(rf"C:\Users\{username}\OneDrive\Backups\Subtitle OCR Models")
+    test_image_files = Path(rf"C:\Users\{username}\OneDrive\Public\test images")
+    test_sub_ocr = SubtitleOCR(model_dir=models_dir)
     for test_image in test_image_files.iterdir():
         test_outputs = test_sub_ocr.ocr(str(test_image))
         logger.info(test_image)

@@ -28,7 +28,8 @@ class ModelTrainer:
         self.lr_scheduler, self.num_epochs = params["lr_scheduler"], params["num_epochs"]
         self.sanity_check = params["sanity_check"]
         self.model_dir, self.model_filename = Path(params["model_dir"]), Path(params["model_filename"])
-        self.model_dir.mkdir(parents=True, exist_ok=True)
+        self.checkpoint_dir = self.model_dir / "Checkpoints"
+        self.model_dir.mkdir(parents=True, exist_ok=True), self.checkpoint_dir.mkdir(exist_ok=True)
 
         # These attributes are defined here, but since they are not needed at the moment of creation, we keep them None
         self.writer = self.train_loader = self.val_loader = None
@@ -260,7 +261,7 @@ class ModelTrainer:
         }
         if self.metrics_fn:
             checkpoint.update({"metrics": self.metrics, "val_metrics": self.val_metrics})
-        torch.save(checkpoint, self.model_dir.joinpath(f"{self.model_filename} (checkpoint) ({self.best_loss}).pt"))
+        torch.save(checkpoint, self.checkpoint_dir / f"{self.model_filename} (checkpoint) ({self.best_loss}).pt")
 
     def load_checkpoint(self, model_checkpoint_file: str, new_learning_rate: float = None) -> None:
         if not model_checkpoint_file or not Path(model_checkpoint_file).exists():
@@ -294,7 +295,7 @@ class ModelTrainer:
         Save the model state and checkpoint from the last epoch.
         :param last_val_loss: Value of validation loss in the last epoch.
         """
-        model_name = self.model_dir.joinpath(f"{self.model_filename} ({last_val_loss}).pt")
+        model_name = self.model_dir / f"{self.model_filename} ({last_val_loss}).pt"
         torch.save(self.model.state_dict(), model_name)
         logger.info(f"Model Saved! Name: {model_name}")
 

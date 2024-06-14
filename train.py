@@ -1,4 +1,5 @@
 import logging
+import os
 
 import torch
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -15,7 +16,7 @@ from sub_ocr.utilities.visualize import visualize_dataset
 logger = logging.getLogger(__name__)
 
 
-def train_text_detection(lang: Types.Language) -> None:
+def train_text_detection(lang: Types.Language, model_dir: str) -> None:
     # Setup hyperparameters
     num_epochs = 10
     batch_size, val_batch_size = 12, 1
@@ -37,7 +38,7 @@ def train_text_detection(lang: Types.Language) -> None:
         "loss_fn": DBLoss(), "metrics_fn": DBMetrics(), "optimizer": optimizer, "lr_scheduler": lr_scheduler,
         "num_epochs": num_epochs,
         "sanity_check": False,
-        "model_dir": "saved models/det models", "model_filename": f"{lang} {model_name} {backbone}"
+        "model_dir": model_dir, "model_filename": f"{lang} {model_name} {backbone}"
     }
     trainer = ModelTrainer(model, train_params)
     trainer.set_loaders(train_ds, val_ds, batch_size, val_batch_size, num_workers)
@@ -45,7 +46,7 @@ def train_text_detection(lang: Types.Language) -> None:
     trainer.train()
 
 
-def train_text_recognition(lang: Types.Language) -> None:
+def train_text_recognition(lang: Types.Language, model_dir: str) -> None:
     # Setup hyperparameters
     num_epochs = 10
     batch_size, val_batch_size = 256, 4096
@@ -69,7 +70,7 @@ def train_text_recognition(lang: Types.Language) -> None:
         "lr_scheduler": lr_scheduler,
         "num_epochs": num_epochs,
         "sanity_check": False,
-        "model_dir": "saved models/rec models", "model_filename": f"{lang} {model_name} {backbone}"
+        "model_dir": model_dir, "model_filename": f"{lang} {model_name} {backbone}"
     }
     trainer = ModelTrainer(model, train_params)
     trainer.set_loaders(train_ds, val_ds, batch_size, val_batch_size, num_workers)
@@ -78,13 +79,14 @@ def train_text_recognition(lang: Types.Language) -> None:
 
 
 def main(lang: Types.Language, model_type: Types.ModelType) -> None:
-    tb = TelegramBot()
+    tb, username = TelegramBot(), os.getlogin()
+    model_dir = rf"C:\Users\{username}\OneDrive\Backups\Subtitle OCR Models"
     assert model_type in [Types.det, Types.rec], f"Model type must be either {Types.det} or {Types.rec}"
     try:
         if model_type == Types.det:
-            train_text_detection(lang)
+            train_text_detection(lang, model_dir)
         else:
-            train_text_recognition(lang)
+            train_text_recognition(lang, model_dir)
         tb.send_telegram_message(f"Text {model_type} Model Training Done!")
     except Exception as error:
         error_msg = f"During Text {model_type} training an error occurred:\n{error}"
