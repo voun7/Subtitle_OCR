@@ -1,6 +1,6 @@
 import subprocess
 
-from utilities.utils import Types
+from sub_ocr.utilities.utils import Types
 
 
 def generate_trdg_images() -> None:

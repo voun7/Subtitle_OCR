@@ -3,8 +3,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from models.detection.db.backbones.mobilenetv3 import mobilenet_v3_small, mobilenet_v3_large
-from models.detection.db.backbones.resnet import resnet18, resnet34, resnet50, resnet101, resnet152, \
+from sub_ocr.models.detection.db.backbones.mobilenetv3 import mobilenet_v3_small, mobilenet_v3_large
+from sub_ocr.models.detection.db.backbones.resnet import resnet18, resnet34, resnet50, resnet101, resnet152, \
     deformable_resnet18, deformable_resnet50
 
 

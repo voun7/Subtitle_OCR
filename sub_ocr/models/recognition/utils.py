@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from utilities.utils import Types, read_chars
+from sub_ocr.utilities.utils import Types, read_chars
 
 
 class CTCStrLabelConverter:

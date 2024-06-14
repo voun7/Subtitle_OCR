@@ -15,7 +15,7 @@ def get_console_handler() -> logging.handlers:
 
 def get_file_handler(log_name: str, log_format: logging.Formatter) -> logging.handlers:
     # Create folder for file logs.
-    log_dir = Path(__file__).parent.parent / f"logs{f'/{log_name}' if log_name else log_name}"
+    log_dir = Path("logs")
     log_dir.mkdir(parents=True, exist_ok=True)
     log_file = log_dir / "runtime.log"
 

@@ -4,11 +4,11 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from models.detection import DB, DBPostProcess
-from models.recognition import CRNN, LabelPostProcess
-from utilities.logger_setup import setup_logging
-from utilities.utils import Types, read_image, read_chars, resize_norm_img, pascal_voc_bb, flatten_iter
-from utilities.visualize import visualize_data
+from sub_ocr.models.detection import DB, DBPostProcess
+from sub_ocr.models.recognition import CRNN, LabelPostProcess
+from sub_ocr.utilities.logger_setup import setup_logging
+from sub_ocr.utilities.utils import Types, read_image, read_chars, resize_norm_img, pascal_voc_bb, flatten_iter
+from sub_ocr.utilities.visualize import visualize_data
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ class SubtitleOCR:
             post_processor = LabelPostProcess(alphabet)
 
         logger.debug(f"Device: {self.device}, Model Params: {model_params}, File: {file}")
-        model.load_state_dict(torch.load(file))
+        model.load_state_dict(torch.load(file, map_location=self.device))
         model.to(self.device).eval()
         return model, post_processor, image_h, image_w
 
