@@ -1,7 +1,6 @@
 # Subtitle OCR
 
-![python version](https://img.shields.io/badge/Python-3.11-blue)
-![support os](https://img.shields.io/badge/OS-Windows-green.svg)
+![python version](https://img.shields.io/badge/Python-3.12-blue)
 
 Program that uses deep learning to detect and recognize texts.
 The training data is optimized for subtitle text images.

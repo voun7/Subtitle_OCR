@@ -15,8 +15,10 @@ logger = logging.getLogger(__name__)
 
 
 class SubtitleOCR:
+    supported_languages = [Types.english, ]
 
-    def __init__(self, lang: Types.Language = Types.english, model_dir: Path = Path("saved models")) -> None:
+    def __init__(self, lang: Types.Language | str = Types.english, model_dir: Path = Path("saved models")) -> None:
+        assert lang in self.supported_languages, "Requested language not available!"
         self.models_dir, self.device = model_dir, "cuda" if torch.cuda.is_available() else "cpu"
         self.det_model, self.det_post_process, self.det_img_h, self.det_img_w = self.init_model(lang)
         self.rec_model, self.rec_post_process, self.rec_img_h, _ = self.init_model(lang, Types.rec)
@@ -86,8 +88,7 @@ class SubtitleOCR:
             img = resize_norm_img(img, self.rec_img_h, img.shape[1], img.shape[0] < self.rec_img_h)[0]
             img = torch.from_numpy(img).to(self.device)
             prediction = self.rec_model(img.unsqueeze(0))
-            text, score = self.rec_post_process(prediction)
-            return text, score
+            return self.rec_post_process(prediction)
 
         if labels:
             for label in labels:

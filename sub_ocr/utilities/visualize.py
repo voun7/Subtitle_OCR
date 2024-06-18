@@ -25,9 +25,8 @@ def visualize_np_image(image: np.ndarray, title: str, dsp_time: int) -> None:
         image = np.moveaxis(image, 0, -1)  # change image data format from [C, H, W] to [H, W, C]
         image = cv.cvtColor(image, cv.COLOR_RGB2BGR)
     if scale := get_scale_factor(image):
-        image = rescale(scale, image)
-    title = f"{title} - " or ""
-    display_image(image, f"{title}Image Rescale Value: {round(scale, 3) if scale else scale}", dsp_time)
+        image, scale = rescale(scale, image), round(scale, 4)
+    display_image(image, f"{f'{title} - ' if title else title}Image Rescale Value: {scale}", dsp_time)
 
 
 def visualize_dataset(dataset, num: int = 5, dsp_time: int = 2) -> None:
@@ -60,4 +59,4 @@ def visualize_data(image_path: str, labels: list, crop_bbox: bool = True, put_te
                 if text and put_text:
                     cv.putText(image, text, (x_max, y_max), cv.FONT_HERSHEY_PLAIN, 2, (0, 255, 0), 2)
 
-    display_image(image, f"Image Rescale Value: {round(scale, 6) if scale else scale}")
+    display_image(image, f"Image Rescale Value: {round(scale, 4) if scale else scale}")

@@ -109,7 +109,7 @@ def resize_norm_img(image: np.ndarray, target_height: int, target_width: int, pa
     # Calculate the scaling factor to resize the image
     scale = min(target_height / image.shape[0], target_width / image.shape[1])
     # Resize the image while maintaining aspect ratio
-    resized_image = cv.resize(image, None, fx=scale, fy=scale)
+    resized_image = rescale(scale, image)
     if pad:  # Add padding if requested
         pad_h, pad_w = target_height - resized_image.shape[0], target_width - resized_image.shape[1]
         resized_image = cv.copyMakeBorder(resized_image, 0, pad_h, 0, pad_w, cv.BORDER_CONSTANT, value=(0, 0, 0))

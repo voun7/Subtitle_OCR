@@ -19,12 +19,12 @@ class ModelTrainer:
         Model trainer for program.
         The batches from the dataloader should be a dictionary.
         The losses from the loss function should be a dictionary.
-        The trainer supports optional use of metrics that should be a dictionary.
+        The trainer requires the use of a metrics function that should return a dictionary.
         """
         self.use_cuda = torch.cuda.is_available()
         self.device = "cuda" if self.use_cuda else "cpu"
         self.model = self.init_model(model)
-        self.loss_fn, self.metrics_fn, self.optimizer = params["loss_fn"], params.get("metrics_fn"), params["optimizer"]
+        self.loss_fn, self.metrics_fn, self.optimizer = params["loss_fn"], params["metrics_fn"], params["optimizer"]
         self.lr_scheduler, self.num_epochs = params["lr_scheduler"], params["num_epochs"]
         self.sanity_check = params["sanity_check"]
         self.model_dir, self.model_filename = Path(params["model_dir"]), Path(params["model_filename"])
@@ -74,7 +74,7 @@ class ModelTrainer:
         outputs = self.model(images)
         # Step 2 - Computes the loss and metrics
         loss = self.loss_fn(outputs, batch)
-        metric = self.compute_metrics(outputs, batch)
+        metric = self.metrics_fn(outputs, batch, False)
         # Step 3 - Computes gradients for both "x" and "y" parameters
         loss["loss"].backward()
         # Step 4 - Updates parameters using gradients and the learning rate
@@ -94,7 +94,7 @@ class ModelTrainer:
         outputs = self.model(images)
         # Step 2 - Computes the loss and metrics
         loss = self.loss_fn(outputs, batch)
-        metric = self.compute_metrics(outputs, batch, True)
+        metric = self.metrics_fn(outputs, batch, True)
         # There is no need to compute Steps 3 and 4, since we don't update parameters during evaluation
         return loss, metric
 
@@ -132,24 +132,18 @@ class ModelTrainer:
             images = batch.pop("image")
             mini_batch_loss, mini_batch_metric = step_fn(images, batch)
             self.append_dict_val(mini_batch_loss, mini_batch_losses)
-            if self.metrics_fn:
-                self.append_dict_val(mini_batch_metric, mini_batch_metrics)
+            self.append_dict_val(mini_batch_metric, mini_batch_metrics)
             pos = self.total_epochs + (index + 1) / num_of_batches
-            metric_txt = f" Metric: {mini_batch_metric}," if self.metrics_fn else ""
-            print(f"\rEpoch: {pos:.3f}, Batch {mode}{metric_txt} Loss: {mini_batch_loss}", end="", flush=True)
+            print(f"\rEpoch: {pos:.3f}, Batch {mode} Loss: {mini_batch_loss}, Metric: {mini_batch_metric}", end="",
+                  flush=True)
 
             # break the loop in case of sanity check
             if self.sanity_check is True:
                 break
 
         loss = {loss_name: np.mean(loss_values) for loss_name, loss_values in mini_batch_losses.items()}
-        if self.metrics_fn:
-            metric = {metric_name: np.mean(metric_values) for metric_name, metric_values in mini_batch_metrics.items()}
+        metric = {metric_name: np.mean(metric_values) for metric_name, metric_values in mini_batch_metrics.items()}
         return loss, metric
-
-    def compute_metrics(self, predictions: torch.Tensor, batch: dict, validation: bool = False) -> dict | None:
-        if self.metrics_fn:
-            return self.metrics_fn(predictions, batch, validation)
 
     def set_seed(self, seed: int) -> None:
         torch.backends.cudnn.deterministic = True
@@ -184,7 +178,7 @@ class ModelTrainer:
         print(end="\r", flush=True)
 
     def train(self, seed: int = 42) -> None:
-        assert self.train_loader and self.val_loader
+        assert self.train_loader and self.val_loader, "Train or Val data loader has not been set!"
         self.set_seed(seed)  # To ensure reproducibility of the training process
         start_time, self.writer = perf_counter(), SummaryWriter()
         best_model_wts = deepcopy(self.model.state_dict())  # Initial copy of model weights is saved
@@ -194,17 +188,13 @@ class ModelTrainer:
             # Performs training using mini-batches
             self.model.train()  # Sets model to TRAIN mode
             loss, metric = self._mini_batch()
-            self.append_dict_val(loss, self.losses)
-            if self.metrics_fn:
-                self.append_dict_val(metric, self.metrics)
+            self.append_dict_val(loss, self.losses), self.append_dict_val(metric, self.metrics)
             # Validation
             self.model.eval()  # Sets model to EVAL mode
             with torch.no_grad():  # no gradients in validation!
                 # Performs evaluation using mini-batches
                 val_loss, val_metric = self._mini_batch(validation=True)
-                self.append_dict_val(val_loss, self.val_losses)
-                if self.metrics_fn:
-                    self.append_dict_val(val_metric, self.val_metrics)
+                self.append_dict_val(val_loss, self.val_losses), self.append_dict_val(val_metric, self.val_metrics)
 
             self.total_epochs += 1  # Keeps track of the total numbers of epochs
             self.record_values(loss, val_loss, metric, val_metric)
@@ -225,7 +215,7 @@ class ModelTrainer:
         self.save_model(val_loss["loss"])
         total_time = timedelta(seconds=round(perf_counter() - start_time))
         logger.info(f"Model Training Completed. Total Time: {total_time}")
-        logger.debug(f"{self.losses = },\n{self.val_losses = },\n{self.metrics = }, \n{self.val_metrics = }")
+        logger.debug(f"{self.losses=},\n{self.val_losses=},\n{self.metrics=}, \n{self.val_metrics=}")
 
     def record_values(self, loss: dict, val_loss: dict, metric: dict, val_metric: dict) -> None:
         """
@@ -236,19 +226,17 @@ class ModelTrainer:
         if hasattr(self.metrics_fn, "gather_val_metrics"):
             more_val_metric = self.metrics_fn.gather_val_metrics()
             self.append_dict_val(more_val_metric, self.val_metrics), val_metric.update(more_val_metric)
-        space = "\n" if len(loss) > 1 else " "
-        metric_txt = f"Training Metric: {metric}, Validation Metric: {val_metric},{space}" if self.metrics_fn else ""
-        logger.info(f"Epoch: {self.total_epochs}/{self.num_epochs}, Current lr={current_lr},\n{metric_txt}"
-                    f"Training Loss: {loss}, Validation Loss: {val_loss}")
+        logger.info(f"Epoch: {self.total_epochs}/{self.num_epochs}, Current lr={current_lr},\n"
+                    f"Training Loss: {loss}, Validation Loss: {val_loss},{'\n' if len(loss) > 1 else ' '}"
+                    f"Training Metric: {metric}, Validation Metric: {val_metric}")
 
         # Records the values for each epoch on the writer
         self.writer.add_scalar("Learning Rate", current_lr, self.total_epochs)
         self.writer.add_scalars("Training Loss", loss, self.total_epochs)
         self.writer.add_scalars("Validation Loss", val_loss, self.total_epochs)
-        if self.metrics_fn:
-            # For validation metrics that are generated per epoch instead of per batch
-            self.writer.add_scalars("Training Metric", metric, self.total_epochs)
-            self.writer.add_scalars("Validation Metric", val_metric, self.total_epochs)
+        # For validation metrics that are generated per epoch instead of per batch
+        self.writer.add_scalars("Training Metric", metric, self.total_epochs)
+        self.writer.add_scalars("Validation Metric", val_metric, self.total_epochs)
 
     def save_checkpoint(self) -> None:
         """
@@ -257,10 +245,9 @@ class ModelTrainer:
         checkpoint = {
             "epoch": self.total_epochs,
             "model_state_dict": self.model.state_dict(), "optimizer_state_dict": self.optimizer.state_dict(),
-            "loss": self.losses, "val_loss": self.val_losses, "best_loss": self.best_loss
+            "loss": self.losses, "val_loss": self.val_losses, "best_loss": self.best_loss,
+            "metrics": self.metrics, "val_metrics": self.val_metrics
         }
-        if self.metrics_fn:
-            checkpoint.update({"metrics": self.metrics, "val_metrics": self.val_metrics})
         torch.save(checkpoint, self.checkpoint_dir / f"{self.model_filename} (checkpoint) ({self.best_loss}).pt")
 
     def load_checkpoint(self, model_checkpoint_file: str, new_learning_rate: float = None) -> None:
@@ -279,16 +266,14 @@ class ModelTrainer:
         self.total_epochs = checkpoint["epoch"]
         self.losses, self.val_losses = checkpoint["loss"], checkpoint["val_loss"]
         self.best_loss = checkpoint["best_loss"]
-        met_p = ""  # Metrics Print
-        if self.metrics_fn:
-            self.metrics, self.val_metrics = checkpoint["metrics"], checkpoint["val_metrics"]
-            met_p = f"\nMetric Keys: {list(self.metrics)}\nVal Metric Keys: {list(self.val_metrics)}\n"
+        self.metrics, self.val_metrics = checkpoint["metrics"], checkpoint["val_metrics"]
         self.num_epochs += self.total_epochs  # update the overall number of epochs
         logger.info(f"Model Checkpoint Loaded: Model Params No: {len(list(self.model.named_parameters()))},\n"
                     f"Optimizer: {self.optimizer},\nTotal Epochs: {self.total_epochs}, Best Loss: {self.best_loss}\n"
-                    f"Loss Keys: {list(self.losses)}\nVal Loss Keys: {list(self.val_losses)}{met_p}")
-        logger.debug(f"Checkpoint Loss & Metric Values:\n{self.losses = },\n{self.val_losses = },\n{self.metrics = },\n"
-                     f"{self.val_metrics = }")
+                    f"Loss Keys: {list(self.losses)}\nVal Loss Keys: {list(self.val_losses)}\n"
+                    f"Metric Keys: {list(self.metrics)}\nVal Metric Keys: {list(self.val_metrics)}")
+        logger.debug(f"Checkpoint Loss & Metric Values:\n{self.losses=},\n{self.val_losses=},\n{self.metrics=},\n"
+                     f"{self.val_metrics=}")
 
     def save_model(self, last_val_loss: float) -> None:
         """
@@ -303,13 +288,13 @@ class ModelTrainer:
 def plot_checkpoint(model_checkpoint_file: str) -> None:
     """
     Use data from model checkpoint to plot the data recorded during training.
+    command to view graph: tensorboard --logdir=runs
     """
     writer, checkpoint = SummaryWriter(comment="checkpoint_plt"), torch.load(model_checkpoint_file)
     total_epochs = checkpoint["epoch"]
-    losses, val_losses, best_loss = checkpoint["loss"], checkpoint["val_loss"], checkpoint.get("best_loss")
-    metrics, val_metrics = checkpoint.get("metrics"), checkpoint.get("val_metrics")
-    if metrics and val_metrics:
-        losses.update(metrics), val_losses.update(val_metrics)
+    losses, val_losses, best_loss = checkpoint["loss"], checkpoint["val_loss"], checkpoint["best_loss"]
+    metrics, val_metrics = checkpoint["metrics"], checkpoint["val_metrics"]
+    losses.update(metrics), val_losses.update(val_metrics)
     train_keys, val_keys = list(losses), list(val_losses)
     logger.info(f"Plotting Loaded Model Checkpoint: \tTotal Epochs: {total_epochs}, Best Loss: {best_loss}\n"
                 f"Training Keys: {train_keys},\nValidation Keys: {val_keys}")
