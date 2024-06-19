@@ -83,7 +83,7 @@ class CRNN(nn.Module):
 
 
 if __name__ == '__main__':
-    test_img = torch.rand([4, 3, 32, 100])
+    test_img = torch.rand([4, 3, 32, 320])  # Batch Size, Image Channel, Image Height, Image Width
     test_model = CRNN(**{"image_height": 32, "num_class": 50})
     test_output = test_model(test_img)
     print(test_model), print(test_output), print(test_output.shape)

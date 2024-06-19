@@ -185,7 +185,7 @@ class DB(nn.Module):
 
 
 if __name__ == '__main__':
-    test_img = torch.rand([4, 3, 640, 640])
+    test_img = torch.rand([4, 3, 640, 640])  # Batch Size, Image Channel, Image Height, Image Width
     test_model = DB(**{"backbone_name": "deformable_resnet50", "pretrained": False})
     test_output = test_model(test_img)
     print(test_model), print(test_output), print(test_output.shape)

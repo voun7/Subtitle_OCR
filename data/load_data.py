@@ -444,7 +444,7 @@ def load_data(lang: Types.Language, model_type: Types.ModelType, data_type: Type
 if __name__ == '__main__':
     start = perf_counter()
 
-    ts_data = load_data(Types.english, Types.det, Types.train)
+    ts_data = load_data(Types.english, Types.rec, Types.train)
     ts_len = len(ts_data)
     print(f"Data Source Length: {ts_len:,} Data Load Time: {perf_counter() - start:.4f}\n")
     for ts_idx in range(0, ts_len, round(ts_len / 200)):

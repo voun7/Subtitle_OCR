@@ -126,7 +126,7 @@ class ModelTrainer:
         else:
             data_loader, step_fn, mode = self.train_loader, self.train_step_fn, "Training"
 
-        mini_batch_losses, mini_batch_metrics, metric, num_of_batches = {}, {}, None, len(data_loader)
+        mini_batch_losses, mini_batch_metrics, num_of_batches = {}, {}, len(data_loader)
         for index, batch in enumerate(data_loader):
             self.dict_to_device(batch)
             images = batch.pop("image")
@@ -213,8 +213,7 @@ class ModelTrainer:
 
         self.writer.close()  # Closes the writer
         self.save_model(val_loss["loss"])
-        total_time = timedelta(seconds=round(perf_counter() - start_time))
-        logger.info(f"Model Training Completed. Total Time: {total_time}")
+        logger.info(f"Model Training Completed. Total Time: {timedelta(seconds=round(perf_counter() - start_time))}")
         logger.debug(f"{self.losses=},\n{self.val_losses=},\n{self.metrics=}, \n{self.val_metrics=}")
 
     def record_values(self, loss: dict, val_loss: dict, metric: dict, val_metric: dict) -> None:

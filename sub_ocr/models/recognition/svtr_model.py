@@ -499,7 +499,7 @@ class SVTR(nn.Module):
 
 
 if __name__ == '__main__':
-    test_img = torch.rand([4, 3, 32, 100])
-    test_model = SVTR(**{"backbone_name": "svtr_base", "img_size": (32, 100), "num_class": 50})
+    test_img = torch.rand([4, 3, 48, 320])  # Batch Size, Image Channel, Image Height, Image Width
+    test_model = SVTR(**{"backbone_name": "svtr_base", "img_size": (48, 320), "num_class": 50})
     test_output = test_model(test_img)
     print(test_model), print(test_output), print(test_output.shape)

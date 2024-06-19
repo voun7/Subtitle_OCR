@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 def train_text_detection(lang: Types.Language, model_dir: str) -> None:
     # Setup hyperparameters
     num_epochs = 10
-    batch_size, val_batch_size = 12, 1
+    batch_size, val_batch_size = 14, 1
     patience, learning_rate = 4, 0.001
     num_workers = 4
     model_name, backbone = Types.db, "deformable_resnet50"
@@ -53,7 +53,7 @@ def train_text_recognition(lang: Types.Language, model_dir: str) -> None:
     patience, learning_rate = 4, 0.0001
     num_workers = 2
     model_name, backbone = Types.crnn, ""
-    image_h, image_w = 32, 160
+    image_h, image_w = 32, 320
 
     logger.info(f"Loading {lang} Text Recognition Data...")
     train_ds = TextRecognitionDataset(lang, Types.train, model_name, image_h, image_w)
@@ -98,5 +98,5 @@ if __name__ == '__main__':
     setup_logging("training")
     TelegramBot.credential_file = "credentials/telegram auth.json"
     logger.debug("Logging Started")
-    main(Types.english, Types.det)
+    main(Types.english, Types.rec)
     logger.debug("Logging Ended")
