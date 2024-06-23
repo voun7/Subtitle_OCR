@@ -122,7 +122,7 @@ def read_chars(lang: Types.Language) -> str:
     """
     Read the alphabet of the given language from the language file.
     """
-    alphabet_file = Path(__file__).parent.parent / f"models/recognition/alphabets/{lang}.txt"
+    alphabet_file = Path(__file__).parent / f"models/recognition/alphabets/{lang}.txt"
     alphabet = " " + "".join([line.rstrip("\n") for line in alphabet_file.read_text(encoding="utf-8")])
     return alphabet
 

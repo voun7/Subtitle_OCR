@@ -277,7 +277,7 @@ class SVTRNet(nn.Module):
                  sub_norm='nn.LayerNorm',
                  epsilon=1e-6,
                  out_channels=192,
-                 out_char_num=25,
+                 out_char_num=25,  # max_text_len
                  block_unit='Block',
                  act='nn.GELU',
                  last_stage=True,
@@ -409,7 +409,7 @@ class Im2Seq(nn.Module):
 
 
 class CTCHead(nn.Module):
-    def __init__(self, in_channels, out_channels, mid_channels=None, return_feats=False):
+    def __init__(self, in_channels, out_channels, mid_channels=None):
         super().__init__()
         if mid_channels is None:
             self.fc = nn.Linear(in_channels, out_channels)
@@ -419,7 +419,6 @@ class CTCHead(nn.Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.mid_channels = mid_channels
-        self.return_feats = return_feats
         self.apply(self._init_weights)
 
     def _init_weights(self, m):
@@ -437,12 +436,7 @@ class CTCHead(nn.Module):
 
         predicts = predicts.permute(1, 0, 2)  # B, T, C ----> T, B, C
         predicts = predicts.log_softmax(2)
-
-        if self.return_feats:
-            result = predicts, x
-        else:
-            result = predicts
-        return result
+        return predicts
 
 
 class SVTR(nn.Module):
@@ -484,10 +478,10 @@ class SVTR(nn.Module):
         },
     }
 
-    def __init__(self, backbone_name: str, img_size: tuple, num_class: int) -> None:
+    def __init__(self, backbone_name: str, img_size: tuple, num_class: int, max_text_len: int = 81) -> None:
         super().__init__()
         params = self.default_cfgs[backbone_name]
-        self.backbone = SVTRNet(**{**params, "img_size": img_size, "out_char_num": num_class})
+        self.backbone = SVTRNet(**{**params, "img_size": img_size, "out_char_num": max_text_len})
         self.neck = Im2Seq()
         self.head = CTCHead(self.backbone.out_channels, num_class)
 

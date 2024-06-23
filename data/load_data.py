@@ -5,8 +5,8 @@ from time import perf_counter
 import numpy as np
 from scipy.io import loadmat
 
-from sub_ocr.utilities.utils import Types, flatten_iter, pairwise_tuples, rect_corners
-from sub_ocr.utilities.visualize import visualize_data
+from sub_ocr.utils import Types, flatten_iter, pairwise_tuples, rect_corners
+from utilities.visualize import visualize_data
 
 DATASET_DIR = Path(r"C:\Users\Victor\Documents\Python Datasets\Subtitle_OCR")
 

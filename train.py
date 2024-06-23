@@ -7,11 +7,11 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from data.build_dataset import TextDetectionDataset, TextRecognitionDataset
 from sub_ocr.models.detection import DB, DBLoss, DBMetrics
 from sub_ocr.models.recognition import CRNN, CTCLoss, RecMetrics
-from sub_ocr.utilities.logger_setup import setup_logging
-from sub_ocr.utilities.telegram_bot import TelegramBot
-from sub_ocr.utilities.trainer import ModelTrainer
-from sub_ocr.utilities.utils import Types, read_chars
-from sub_ocr.utilities.visualize import visualize_dataset
+from sub_ocr.utils import Types, read_chars
+from utilities.logger_setup import setup_logging
+from utilities.telegram_bot import TelegramBot
+from utilities.trainer import ModelTrainer
+from utilities.visualize import visualize_dataset
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,7 @@
 import cv2 as cv
 import numpy as np
 
-from .utils import read_image, rescale, pascal_voc_bb, flatten_iter, crop_image
+from sub_ocr.utils import read_image, rescale, pascal_voc_bb, flatten_iter, crop_image
 
 
 def get_scale_factor(img_frame: np.ndarray, img_target_height: int = 600) -> float:

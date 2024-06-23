@@ -7,9 +7,7 @@ import torch
 
 from sub_ocr.models.detection import DB, DBPostProcess
 from sub_ocr.models.recognition import CRNN, LabelPostProcess
-from sub_ocr.utilities.logger_setup import setup_logging
-from sub_ocr.utilities.utils import Types, read_image, read_chars, resize_norm_img, pascal_voc_bb, flatten_iter
-from sub_ocr.utilities.visualize import visualize_data
+from sub_ocr.utils import Types, read_image, read_chars, resize_norm_img, pascal_voc_bb, flatten_iter
 
 logger = logging.getLogger(__name__)
 
@@ -122,6 +120,9 @@ def test_ocr() -> None:
 
 
 if __name__ == '__main__':
+    from utilities.logger_setup import setup_logging
+    from utilities.visualize import visualize_data
+
     setup_logging()
     logger.debug("Logging Started")
     test_ocr()

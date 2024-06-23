@@ -5,8 +5,7 @@ from torch.utils.data import Dataset
 
 from data.load_data import load_data
 from sub_ocr.models.detection.db.pre_process import db_preprocess, db_collate_fn
-from sub_ocr.utilities.utils import Types, read_image, resize_norm_img, rescale, flatten_iter, pairwise_tuples, \
-    crop_image
+from sub_ocr.utils import Types, read_image, resize_norm_img, rescale, flatten_iter, pairwise_tuples, crop_image
 
 
 class TextDetectionDataset(Dataset):
