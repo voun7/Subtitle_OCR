@@ -72,7 +72,7 @@ class TextRecognitionDataset(Dataset):
     @staticmethod
     def augmentations() -> iaa.meta.Sequential:
         augment_seq = iaa.Sequential([
-            iaa.Affine(scale=(0.8, 1.0), rotate=(-5, 5)),
+            iaa.Affine(scale=(0.8, 1.0), rotate=(-3, 3)),
             iaa.GaussianBlur((0.0, 1.0)),
             iaa.Sometimes(0.5, iaa.Sharpen(alpha=(0.0, 1.0)), iaa.SaltAndPepper(0.1, per_channel=True))
         ], random_order=True)
@@ -112,7 +112,8 @@ def test_datasets() -> None:
 
     types = [(Types.english, Types.train), (Types.english, Types.val), (Types.chinese, Types.train),
              (Types.chinese, Types.val)]
-    datasets = [(TextDetectionDataset, Types.db, 640, 640), (TextRecognitionDataset, Types.crnn, 32, 160)]
+    datasets = [(TextDetectionDataset, Types.db, 640, 640), (TextRecognitionDataset, Types.crnn, 32, 320),
+                (TextRecognitionDataset, Types.svtr, 32, 640)]
 
     # For Testing of specific dataset index.
     # ds = TextDetectionDataset(Types.english, Types.train, Types.db, 640, 640)

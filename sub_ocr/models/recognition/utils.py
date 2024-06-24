@@ -13,8 +13,9 @@ class CTCStrLabelConverter:
         """
         self._ignore_case = ignore_case
         self.alphabet = alphabet.lower() if self._ignore_case else alphabet
-        # NOTE: 0 is reserved for 'blank' required by ctc loss
-        self.dict = {character: index for index, character in enumerate(self.alphabet, 1)}
+        self.alphabet = alphabet + '-'  # the 'blank' token at `-1` index of the alphabet
+        # NOTE: 0 in dict is reserved for 'blank' required by ctc loss
+        self.alphabet_dict = {character: index for index, character in enumerate(alphabet, 1)}
 
     def encode(self, text: str | list) -> tuple:
         """
@@ -25,7 +26,7 @@ class CTCStrLabelConverter:
         """
         if isinstance(text, str):
             # characters in the text that are not in the provided alphabets will be replaced with index zero
-            text = [self.dict.get(char.lower() if self._ignore_case else char, 0) for char in text]
+            text = [self.alphabet_dict.get(char.lower() if self._ignore_case else char, 0) for char in text]
             length = [len(text)]
         else:
             length = [len(s) for s in text]
@@ -77,7 +78,7 @@ class LabelPostProcess:
         scores, predictions = scores.transpose(1, 0), predictions.transpose(1, 0).contiguous().view(-1)
         scores = torch.mean(torch.exp(scores), 1)
         scores = scores.item() if scores.numel() == 1 else scores.tolist()
-        predictions = self.converter.decode(predictions, prediction_size, False)
+        predictions = self.converter.decode(predictions, prediction_size)
         return predictions, scores
 
 
@@ -122,4 +123,5 @@ if __name__ == '__main__':
     test_conv = CTCStrLabelConverter(test_alphabet)
     test_encoded, test_len = test_conv.encode(["Testing 123", "Food", "Σ®ä", "aaa", "bbb", "ddΣ®äd", "123", "444"])
     print(test_encoded, test_len)
+    print(test_conv.decode(test_encoded, test_len, True))
     print(test_conv.decode(test_encoded, test_len))

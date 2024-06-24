@@ -19,7 +19,7 @@ class SubtitleOCR:
         assert lang in self.supported_languages, "Requested language not available!"
         self.models_dir, self.device = model_dir, "cuda" if torch.cuda.is_available() else "cpu"
         self.det_model, self.det_post_process, self.det_img_h, self.det_img_w = self.init_model(lang)
-        self.rec_model, self.rec_post_process, self.rec_img_h, _ = self.init_model(lang, Types.rec)
+        self.rec_model, self.rec_post_process, self.rec_img_h, self.rec_img_w = self.init_model(lang, Types.rec)
 
     def init_model(self, lang: Types.Language, model_type: Types.ModelType = Types.det) -> tuple:
         """

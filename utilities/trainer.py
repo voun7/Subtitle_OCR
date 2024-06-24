@@ -185,15 +185,13 @@ class ModelTrainer:
 
         for _ in range(self.epoch_stop):
             current_lr = self.get_lr()
-            # Performs training using mini-batches
             self.model.train()  # Sets model to TRAIN mode
-            loss, metric = self._mini_batch()
+            loss, metric = self._mini_batch()  # Performs training using mini-batches
             self.append_dict_val(loss, self.losses), self.append_dict_val(metric, self.metrics)
             # Validation
             self.model.eval()  # Sets model to EVAL mode
             with torch.no_grad():  # no gradients in validation!
-                # Performs evaluation using mini-batches
-                val_loss, val_metric = self._mini_batch(validation=True)
+                val_loss, val_metric = self._mini_batch(validation=True)  # Performs evaluation using mini-batches
                 self.append_dict_val(val_loss, self.val_losses), self.append_dict_val(val_metric, self.val_metrics)
 
             self.total_epochs += 1  # Keeps track of the total numbers of epochs
