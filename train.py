@@ -6,7 +6,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from data.build_dataset import TextDetectionDataset, TextRecognitionDataset
 from sub_ocr.models.detection import DB, DBLoss, DBMetrics
-from sub_ocr.models.recognition import CRNN, CTCLoss, RecMetrics
+from sub_ocr.models.recognition import SVTR, CTCLoss, RecMetrics
 from sub_ocr.utils import Types, read_chars
 from utilities.logger_setup import setup_logging
 from utilities.telegram_bot import TelegramBot
@@ -49,11 +49,11 @@ def train_text_detection(lang: Types.Language, model_dir: str) -> None:
 def train_text_recognition(lang: Types.Language, model_dir: str) -> None:
     # Setup hyperparameters
     num_epochs = 10
-    batch_size, val_batch_size = 256, 2048
-    patience, learning_rate = 2, 0.001
+    batch_size, val_batch_size = 32, 32
+    patience, learning_rate = 2, 0.0001
     num_workers = 2
-    model_name, backbone = Types.crnn, ""
-    image_h, image_w = 32, 320
+    model_name, backbone = Types.svtr, "svtr_base"
+    image_h, image_w = 32, 640
 
     logger.info(f"Loading {lang} Text Recognition Data...")
     train_ds = TextRecognitionDataset(lang, Types.train, model_name, image_h, image_w)
@@ -62,7 +62,8 @@ def train_text_recognition(lang: Types.Language, model_dir: str) -> None:
     visualize_dataset(train_ds)
 
     alphabet = read_chars(lang)
-    model = CRNN(**{"image_height": image_h, "num_class": len(alphabet) + 1})
+    model = SVTR(**{"backbone_name": backbone, "img_size": (image_h, image_w), "num_class": len(alphabet) + 1,
+                    "max_text_len": 80})
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     lr_scheduler = ReduceLROnPlateau(optimizer, patience=patience)
     train_params = {
