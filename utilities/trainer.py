@@ -34,7 +34,7 @@ class ModelTrainer:
         # These attributes are defined here, but since they are not needed at the moment of creation, we keep them None
         self.writer = self.train_loader = self.val_loader = None
         # These attributes are going to be computed internally, initialize the best loss to a large value
-        self.losses, self.val_losses, self.best_loss = {}, {}, float("inf")
+        self.losses, self.val_losses, self.best_val_loss = {}, {}, float("inf")
         self.metrics, self.val_metrics = {}, {}
         self.total_epochs, self.learning_rates, self.epoch_stop = 0, [], self.num_epochs
 
@@ -54,6 +54,7 @@ class ModelTrainer:
             collate_fn=getattr(dataset, "collate_fn", None),
             pin_memory=self.use_cuda if self.use_cuda and batch_size > 2 else False
         )
+        logger.debug(f"Dataloader initialized: {vars(data_loader)}")
         return data_loader
 
     def set_loaders(self, train_ds, val_ds, batch_size: int, val_batch_size: int, num_workers: int) -> None:
@@ -135,10 +136,9 @@ class ModelTrainer:
             pos = self.total_epochs + (index + 1) / num_of_batches
             print(f"\rEpoch: {pos:.3f}, Batch {mode} Loss: {batch_loss}, Metric: {batch_metric}", end="", flush=True)
 
-            # break the loop in case of sanity check
-            if self.sanity_check is True:
+            if self.sanity_check is True:  # break the loop in case of sanity check
                 break
-        logger.debug(f"Epoch: {self.total_epochs + 1}, Batch {mode} Time: {self.time_calc(start_time)}")
+        logger.debug(f"Epoch: {self.total_epochs + 1}, Batch {mode} Duration: {self.dur_calc(start_time)}")
         loss = {loss_name: np.mean(loss_values) for loss_name, loss_values in batch_losses.items()}
         metric = {metric_name: np.mean(metric_values) for metric_name, metric_values in batch_metrics.items()}
         return loss, metric
@@ -176,7 +176,11 @@ class ModelTrainer:
         print(end="\r", flush=True)
 
     @staticmethod
-    def time_calc(start_time: float) -> timedelta:
+    def dur_calc(start_time: float) -> timedelta:
+        """
+        Duration calculator.
+        :return: The duration
+        """
         return timedelta(seconds=round(perf_counter() - start_time))
 
     def train(self, seed: int = 42) -> None:
@@ -199,8 +203,8 @@ class ModelTrainer:
             self.total_epochs += 1  # Keeps track of the total numbers of epochs
             self.record_values(loss, metric, val_loss, val_metric)
             # store best model
-            if val_loss["loss"] < self.best_loss:
-                self.best_loss, best_model_wts = val_loss["loss"], deepcopy(self.model.state_dict())
+            if val_loss["loss"] < self.best_val_loss:
+                self.best_val_loss, best_model_wts = val_loss["loss"], deepcopy(self.model.state_dict())
                 self.clear_previous_print()
                 logger.info("Saving best model weights!")
                 self.save_checkpoint()
@@ -213,7 +217,7 @@ class ModelTrainer:
 
         self.writer.close()  # Closes the writer
         self.save_model(val_loss["loss"])
-        logger.info(f"Model Training Completed. Total Time: {self.time_calc(start_time)}")
+        logger.info(f"Model Training Completed. Duration: {self.dur_calc(start_time)}")
         logger.debug(f"Trainer Values:\n{self.losses=}\n{self.val_losses=}\n{self.metrics=}\n{self.val_metrics=}\n"
                      f"{self.learning_rates=}")
 
@@ -245,10 +249,10 @@ class ModelTrainer:
         checkpoint = {
             "model_state_dict": self.model.state_dict(), "optimizer_state_dict": self.optimizer.state_dict(),
             "total_epochs": self.total_epochs, "learning_rates": self.learning_rates,
-            "losses": self.losses, "val_losses": self.val_losses, "best_loss": self.best_loss,
+            "losses": self.losses, "val_losses": self.val_losses, "best_val_loss": self.best_val_loss,
             "metrics": self.metrics, "val_metrics": self.val_metrics
         }
-        torch.save(checkpoint, self.checkpoint_dir / f"{self.model_filename} (checkpoint) ({self.best_loss}).pt")
+        torch.save(checkpoint, self.checkpoint_dir / f"{self.model_filename} (checkpoint) ({self.best_val_loss}).pt")
 
     def load_checkpoint(self, model_checkpoint_file: str, new_learning_rate: float = None) -> None:
         if not model_checkpoint_file or not Path(model_checkpoint_file).exists():
@@ -264,11 +268,12 @@ class ModelTrainer:
 
         self.total_epochs, self.learning_rates = checkpoint["total_epochs"], checkpoint["learning_rates"]
         self.losses, self.val_losses = checkpoint["losses"], checkpoint["val_losses"]
-        self.best_loss = checkpoint["best_loss"]
+        self.best_val_loss = checkpoint["best_val_loss"]
         self.metrics, self.val_metrics = checkpoint["metrics"], checkpoint["val_metrics"]
         self.num_epochs += self.total_epochs  # update the overall number of epochs
         logger.info(f"Model Checkpoint Loaded: Model Params No: {len(list(self.model.named_parameters()))},\n"
-                    f"Optimizer: {self.optimizer},\nTotal Epochs: {self.total_epochs}, Best Loss: {self.best_loss}\n"
+                    f"Optimizer: {self.optimizer},\nTotal Epochs: {self.total_epochs}, "
+                    f"Best Validation Loss: {self.best_val_loss}\n"
                     f"Loss Keys: {list(self.losses)}\nVal Loss Keys: {list(self.val_losses)}\n"
                     f"Metric Keys: {list(self.metrics)}\nVal Metric Keys: {list(self.val_metrics)}")
         logger.debug(f"Checkpoint Values:\n{self.losses=}\n{self.val_losses=}\n{self.metrics=}\n{self.val_metrics=}\n"
@@ -291,12 +296,12 @@ def plot_checkpoint(model_checkpoint_file: str) -> None:
     """
     writer, checkpoint = SummaryWriter(comment="checkpoint_plt"), torch.load(model_checkpoint_file)
     total_epochs, learning_rates = checkpoint["total_epochs"], checkpoint["learning_rates"]
-    losses, val_losses, best_loss = checkpoint["losses"], checkpoint["val_losses"], checkpoint["best_loss"]
+    losses, val_losses, best_val_loss = checkpoint["losses"], checkpoint["val_losses"], checkpoint["best_val_loss"]
     metrics, val_metrics = checkpoint["metrics"], checkpoint["val_metrics"]
     losses.update(metrics), val_losses.update(val_metrics)
     train_keys, val_keys = list(losses), list(val_losses)
-    logger.info(f"Plotting Loaded Model Checkpoint: \tTotal Epochs: {total_epochs}, Best Loss: {best_loss}\n"
-                f"Training Keys: {train_keys},\nValidation Keys: {val_keys}")
+    logger.info(f"Plotting Loaded Model Checkpoint: \tTotal Epochs: {total_epochs}, "
+                f"Best Validation Loss: {best_val_loss}\nTraining Keys: {train_keys},\nValidation Keys: {val_keys}")
 
     for idx in range(total_epochs):
         writer.add_scalar("Learning Rate", learning_rates[idx], idx)

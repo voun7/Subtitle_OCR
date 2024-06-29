@@ -1,4 +1,5 @@
 import math
+from itertools import batched
 from pathlib import Path
 from typing import NewType, Iterable, Generator
 
@@ -27,7 +28,7 @@ class Types:
 
 
 def pairwise_tuples(data):
-    return tuple(zip(data[::2], data[1::2]))
+    return tuple(batched(data, 2))
 
 
 def flatten_iter(iterable: Iterable) -> Generator:

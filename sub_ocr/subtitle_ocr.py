@@ -6,7 +6,7 @@ import numpy as np
 import torch
 
 from sub_ocr.models.detection import DB, DBPostProcess
-from sub_ocr.models.recognition import CRNN, LabelPostProcess
+from sub_ocr.models.recognition import SVTR, LabelPostProcess
 from sub_ocr.utils import Types, read_image, read_chars, resize_norm_img, pascal_voc_bb, flatten_iter
 
 logger = logging.getLogger(__name__)
@@ -15,9 +15,9 @@ logger = logging.getLogger(__name__)
 class SubtitleOCR:
     supported_languages = [Types.english, ]
 
-    def __init__(self, lang: Types.Language | str = Types.english, model_dir: Path = Path("saved models")) -> None:
+    def __init__(self, lang: Types.Language | str = Types.english, model_dir: str = "saved models") -> None:
         assert lang in self.supported_languages, "Requested language not available!"
-        self.models_dir, self.device = model_dir, "cuda" if torch.cuda.is_available() else "cpu"
+        self.models_dir, self.device = Path(model_dir), "cuda" if torch.cuda.is_available() else "cpu"
         self.det_model, self.det_post_process, self.det_img_h, self.det_img_w = self.init_model(lang)
         self.rec_model, self.rec_post_process, self.rec_img_h, self.rec_img_w = self.init_model(lang, Types.rec)
 
@@ -32,9 +32,9 @@ class SubtitleOCR:
             model, file = DB(**model_params), next(self.models_dir.glob(f"{lang} {Types.db} {backbone} *.pt"))
             post_processor = DBPostProcess()
         else:
-            alphabet, backbone, image_h, image_w = read_chars(lang), "", 32, None
-            model_params = {"image_height": image_h, "num_class": len(alphabet) + 1}
-            model, file = CRNN(**model_params), next(self.models_dir.glob(f"{lang} {Types.crnn} {backbone} *.pt"))
+            alphabet, backbone, image_h, image_w = read_chars(lang), "", 48, None
+            model_params = {"num_class": len(alphabet) + 1}
+            model, file = SVTR(**model_params), next(self.models_dir.glob(f"{lang} {Types.svtr} {backbone} *.pt"))
             post_processor = LabelPostProcess(alphabet)
 
         logger.debug(f"Device: {self.device}, Model Params: {model_params}, File: {file}")
@@ -83,8 +83,7 @@ class SubtitleOCR:
 
     def text_recognizer(self, image: np.ndarray, labels: list) -> list:
         def recognizer(img: np.ndarray) -> tuple:
-            img = resize_norm_img(img, self.rec_img_h, self.rec_img_w or img.shape[1],
-                                  True if self.rec_img_w else img.shape[0] < self.rec_img_h)[0]
+            img = resize_norm_img(img, self.rec_img_h, img.shape[1], img.shape[0] < self.rec_img_h)[0]
             img = torch.from_numpy(img).to(self.device)
             prediction = self.rec_model(img.unsqueeze(0))
             return self.rec_post_process(prediction)
@@ -108,9 +107,8 @@ class SubtitleOCR:
 
 def test_ocr() -> None:
     username = os.getlogin()
-    models_dir = Path(rf"C:\Users\{username}\OneDrive\Backups\Subtitle OCR Models")
     test_image_files = Path(rf"C:\Users\{username}\OneDrive\Public\test images")
-    test_sub_ocr = SubtitleOCR(model_dir=models_dir)
+    test_sub_ocr = SubtitleOCR(model_dir=rf"C:\Users\{username}\OneDrive\Backups\Subtitle OCR Models")
     for test_image in test_image_files.iterdir():
         test_outputs = test_sub_ocr.ocr(str(test_image))
         logger.info(test_image)
