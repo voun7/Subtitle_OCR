@@ -63,7 +63,7 @@ class ModelTrainer:
         self.train_loader = self.init_dataloader(train_ds, batch_size, num_workers, True)
         self.val_loader = self.init_dataloader(val_ds, val_batch_size, num_workers, False)
 
-    def train_step_fn(self, images: torch.Tensor, batch: dict) -> tuple[dict, dict | None]:
+    def train_step_fn(self, images: torch.Tensor, batch: dict) -> tuple[dict, dict]:
         """
         Function that performs a step in the train loop.
         :param images: Image Tensors
@@ -83,7 +83,7 @@ class ModelTrainer:
         # Returns the loss and metrics
         return loss, metric
 
-    def val_step_fn(self, images: torch.Tensor, batch: dict) -> tuple[dict, dict | None]:
+    def val_step_fn(self, images: torch.Tensor, batch: dict) -> tuple[dict, dict]:
         """
         Function that performs a step in the validation loop.
         :param images: Image Tensors
@@ -116,7 +116,7 @@ class ModelTrainer:
             dict_1[key] = round(value, 4)
             dict_2.setdefault(key, []).append(value)
 
-    def _mini_batch(self, validation: bool = False) -> tuple[dict, dict | None]:
+    def _mini_batch(self, validation: bool = False) -> tuple[dict, dict]:
         """
         The mini-batch can be used with both loaders.
         :param validation: Determines which loader and corresponding step function is going to be used
@@ -126,23 +126,21 @@ class ModelTrainer:
         else:
             data_loader, step_fn, mode = self.train_loader, self.train_step_fn, "Training"
 
-        mini_batch_losses, mini_batch_metrics, num_of_batches = {}, {}, len(data_loader)
+        batch_losses, batch_metrics, num_of_batches, start_time = {}, {}, len(data_loader), perf_counter()
         for index, batch in enumerate(data_loader):
             self.dict_to_device(batch)
             images = batch.pop("image")
-            mini_batch_loss, mini_batch_metric = step_fn(images, batch)
-            self.append_dict_val(mini_batch_loss, mini_batch_losses)
-            self.append_dict_val(mini_batch_metric, mini_batch_metrics)
+            batch_loss, batch_metric = step_fn(images, batch)
+            self.append_dict_val(batch_loss, batch_losses), self.append_dict_val(batch_metric, batch_metrics)
             pos = self.total_epochs + (index + 1) / num_of_batches
-            print(f"\rEpoch: {pos:.3f}, Batch {mode} Loss: {mini_batch_loss}, Metric: {mini_batch_metric}", end="",
-                  flush=True)
+            print(f"\rEpoch: {pos:.3f}, Batch {mode} Loss: {batch_loss}, Metric: {batch_metric}", end="", flush=True)
 
             # break the loop in case of sanity check
             if self.sanity_check is True:
                 break
-
-        loss = {loss_name: np.mean(loss_values) for loss_name, loss_values in mini_batch_losses.items()}
-        metric = {metric_name: np.mean(metric_values) for metric_name, metric_values in mini_batch_metrics.items()}
+        logger.debug(f"Epoch: {self.total_epochs + 1}, Batch {mode} Time: {self.time_calc(start_time)}")
+        loss = {loss_name: np.mean(loss_values) for loss_name, loss_values in batch_losses.items()}
+        metric = {metric_name: np.mean(metric_values) for metric_name, metric_values in batch_metrics.items()}
         return loss, metric
 
     def set_seed(self, seed: int) -> None:
@@ -176,6 +174,10 @@ class ModelTrainer:
         Clear the previous print line. Should be used before prints or logs in the training loop.
         """
         print(end="\r", flush=True)
+
+    @staticmethod
+    def time_calc(start_time: float) -> timedelta:
+        return timedelta(seconds=round(perf_counter() - start_time))
 
     def train(self, seed: int = 42) -> None:
         assert self.train_loader and self.val_loader, "Train or Val data loader has not been set!"
@@ -211,7 +213,7 @@ class ModelTrainer:
 
         self.writer.close()  # Closes the writer
         self.save_model(val_loss["loss"])
-        logger.info(f"Model Training Completed. Total Time: {timedelta(seconds=round(perf_counter() - start_time))}")
+        logger.info(f"Model Training Completed. Total Time: {self.time_calc(start_time)}")
         logger.debug(f"{self.losses=},\n{self.val_losses=},\n{self.metrics=}, \n{self.val_metrics=}")
 
     def record_values(self, loss: dict, val_loss: dict, metric: dict, val_metric: dict) -> None:
@@ -224,8 +226,8 @@ class ModelTrainer:
             more_val_metric = self.metrics_fn.gather_val_metrics()
             self.append_dict_val(more_val_metric, self.val_metrics), val_metric.update(more_val_metric)
         logger.info(f"Epoch: {self.total_epochs}/{self.num_epochs}, Current lr={current_lr},\n"
-                    f"Training Loss: {loss}, Validation Loss: {val_loss},{'\n' if len(loss) > 1 else ' '}"
-                    f"Training Metric: {metric}, Validation Metric: {val_metric}")
+                    f"Training Loss: {loss}, Metric: {metric}{'\n' if len(loss) > 1 else ' | '}"
+                    f"Validation Loss: {val_loss}, Metric: {val_metric}")
 
         # Records the values for each epoch on the writer
         self.writer.add_scalar("Learning Rate", current_lr, self.total_epochs)
