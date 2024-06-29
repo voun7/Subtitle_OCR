@@ -36,7 +36,7 @@ class ModelTrainer:
         # These attributes are going to be computed internally, initialize the best loss to a large value
         self.losses, self.val_losses, self.best_loss = {}, {}, float("inf")
         self.metrics, self.val_metrics = {}, {}
-        self.total_epochs, self.epoch_stop = 0, self.num_epochs
+        self.total_epochs, self.learning_rates, self.epoch_stop = 0, [], self.num_epochs
 
     def init_model(self, model):
         if self.use_cuda:
@@ -197,7 +197,7 @@ class ModelTrainer:
                 self.append_dict_val(val_loss, self.val_losses), self.append_dict_val(val_metric, self.val_metrics)
 
             self.total_epochs += 1  # Keeps track of the total numbers of epochs
-            self.record_values(loss, val_loss, metric, val_metric)
+            self.record_values(loss, metric, val_loss, val_metric)
             # store best model
             if val_loss["loss"] < self.best_loss:
                 self.best_loss, best_model_wts = val_loss["loss"], deepcopy(self.model.state_dict())
@@ -214,17 +214,19 @@ class ModelTrainer:
         self.writer.close()  # Closes the writer
         self.save_model(val_loss["loss"])
         logger.info(f"Model Training Completed. Total Time: {self.time_calc(start_time)}")
-        logger.debug(f"{self.losses=},\n{self.val_losses=},\n{self.metrics=}, \n{self.val_metrics=}")
+        logger.debug(f"Trainer Values:\n{self.losses=}\n{self.val_losses=}\n{self.metrics=}\n{self.val_metrics=}\n"
+                     f"{self.learning_rates=}")
 
-    def record_values(self, loss: dict, val_loss: dict, metric: dict, val_metric: dict) -> None:
+    def record_values(self, loss: dict, metric: dict, val_loss: dict, val_metric: dict) -> None:
         """
         The logger and tensorboard writer will be used to record the values from the training and validation loop.
         """
         current_lr = self.get_lr()
-        self.clear_previous_print()
+        self.learning_rates.append(current_lr)
         if hasattr(self.metrics_fn, "gather_val_metrics"):
             more_val_metric = self.metrics_fn.gather_val_metrics()
             self.append_dict_val(more_val_metric, self.val_metrics), val_metric.update(more_val_metric)
+        self.clear_previous_print()
         logger.info(f"Epoch: {self.total_epochs}/{self.num_epochs}, Current lr={current_lr},\n"
                     f"Training Loss: {loss}, Metric: {metric}{'\n' if len(loss) > 1 else ' | '}"
                     f"Validation Loss: {val_loss}, Metric: {val_metric}")
@@ -232,9 +234,8 @@ class ModelTrainer:
         # Records the values for each epoch on the writer
         self.writer.add_scalar("Learning Rate", current_lr, self.total_epochs)
         self.writer.add_scalars("Training Loss", loss, self.total_epochs)
-        self.writer.add_scalars("Validation Loss", val_loss, self.total_epochs)
-        # For validation metrics that are generated per epoch instead of per batch
         self.writer.add_scalars("Training Metric", metric, self.total_epochs)
+        self.writer.add_scalars("Validation Loss", val_loss, self.total_epochs)
         self.writer.add_scalars("Validation Metric", val_metric, self.total_epochs)
 
     def save_checkpoint(self) -> None:
@@ -242,9 +243,9 @@ class ModelTrainer:
         Builds dictionary with all elements for resuming training.
         """
         checkpoint = {
-            "epoch": self.total_epochs,
             "model_state_dict": self.model.state_dict(), "optimizer_state_dict": self.optimizer.state_dict(),
-            "loss": self.losses, "val_loss": self.val_losses, "best_loss": self.best_loss,
+            "total_epochs": self.total_epochs, "learning_rates": self.learning_rates,
+            "losses": self.losses, "val_losses": self.val_losses, "best_loss": self.best_loss,
             "metrics": self.metrics, "val_metrics": self.val_metrics
         }
         torch.save(checkpoint, self.checkpoint_dir / f"{self.model_filename} (checkpoint) ({self.best_loss}).pt")
@@ -254,16 +255,15 @@ class ModelTrainer:
             logger.warning("Checkpoint File Not Loaded or Does Not Exist.")
             return
         logger.info(f"Checkpoint File Loaded! File: {model_checkpoint_file}")
-        # Loads dictionary
-        checkpoint = torch.load(model_checkpoint_file)
+        checkpoint = torch.load(model_checkpoint_file)  # Load checkpoint dict
         # Restore state for model and optimizer
         self.model.load_state_dict(checkpoint["model_state_dict"])
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         if new_learning_rate:
             self.set_lr(new_learning_rate)
 
-        self.total_epochs = checkpoint["epoch"]
-        self.losses, self.val_losses = checkpoint["loss"], checkpoint["val_loss"]
+        self.total_epochs, self.learning_rates = checkpoint["total_epochs"], checkpoint["learning_rates"]
+        self.losses, self.val_losses = checkpoint["losses"], checkpoint["val_losses"]
         self.best_loss = checkpoint["best_loss"]
         self.metrics, self.val_metrics = checkpoint["metrics"], checkpoint["val_metrics"]
         self.num_epochs += self.total_epochs  # update the overall number of epochs
@@ -271,8 +271,8 @@ class ModelTrainer:
                     f"Optimizer: {self.optimizer},\nTotal Epochs: {self.total_epochs}, Best Loss: {self.best_loss}\n"
                     f"Loss Keys: {list(self.losses)}\nVal Loss Keys: {list(self.val_losses)}\n"
                     f"Metric Keys: {list(self.metrics)}\nVal Metric Keys: {list(self.val_metrics)}")
-        logger.debug(f"Checkpoint Loss & Metric Values:\n{self.losses=},\n{self.val_losses=},\n{self.metrics=},\n"
-                     f"{self.val_metrics=}")
+        logger.debug(f"Checkpoint Values:\n{self.losses=}\n{self.val_losses=}\n{self.metrics=}\n{self.val_metrics=}\n"
+                     f"{self.learning_rates=}")
 
     def save_model(self, last_val_loss: float) -> None:
         """
@@ -290,8 +290,8 @@ def plot_checkpoint(model_checkpoint_file: str) -> None:
     command to view graph: tensorboard --logdir=runs
     """
     writer, checkpoint = SummaryWriter(comment="checkpoint_plt"), torch.load(model_checkpoint_file)
-    total_epochs = checkpoint["epoch"]
-    losses, val_losses, best_loss = checkpoint["loss"], checkpoint["val_loss"], checkpoint["best_loss"]
+    total_epochs, learning_rates = checkpoint["total_epochs"], checkpoint["learning_rates"]
+    losses, val_losses, best_loss = checkpoint["losses"], checkpoint["val_losses"], checkpoint["best_loss"]
     metrics, val_metrics = checkpoint["metrics"], checkpoint["val_metrics"]
     losses.update(metrics), val_losses.update(val_metrics)
     train_keys, val_keys = list(losses), list(val_losses)
@@ -299,5 +299,6 @@ def plot_checkpoint(model_checkpoint_file: str) -> None:
                 f"Training Keys: {train_keys},\nValidation Keys: {val_keys}")
 
     for idx in range(total_epochs):
+        writer.add_scalar("Learning Rate", learning_rates[idx], idx)
         writer.add_scalars("Training Values", {k: losses[k][idx] for k in train_keys}, idx)
         writer.add_scalars("Validation Values", {k: val_losses[k][idx] for k in val_keys}, idx)

@@ -6,7 +6,7 @@ import numpy as np
 import torch
 
 from sub_ocr.models.detection import DB, DBPostProcess
-from sub_ocr.models.recognition import SVTR, LabelPostProcess
+from sub_ocr.models.recognition import CRNN, LabelPostProcess
 from sub_ocr.utils import Types, read_image, read_chars, resize_norm_img, pascal_voc_bb, flatten_iter
 
 logger = logging.getLogger(__name__)
@@ -32,10 +32,9 @@ class SubtitleOCR:
             model, file = DB(**model_params), next(self.models_dir.glob(f"{lang} {Types.db} {backbone} *.pt"))
             post_processor = DBPostProcess()
         else:
-            alphabet, backbone, image_h, image_w = read_chars(lang), "svtr_base", 32, 640
-            model_params = {"backbone_name": backbone, "img_size": (image_h, image_w), "num_class": len(alphabet) + 1,
-                            "max_text_len": 80}
-            model, file = SVTR(**model_params), next(self.models_dir.glob(f"{lang} {Types.svtr} {backbone} *.pt"))
+            alphabet, backbone, image_h, image_w = read_chars(lang), "", 32, None
+            model_params = {"image_height": image_h, "num_class": len(alphabet) + 1}
+            model, file = CRNN(**model_params), next(self.models_dir.glob(f"{lang} {Types.crnn} {backbone} *.pt"))
             post_processor = LabelPostProcess(alphabet)
 
         logger.debug(f"Device: {self.device}, Model Params: {model_params}, File: {file}")
@@ -84,7 +83,8 @@ class SubtitleOCR:
 
     def text_recognizer(self, image: np.ndarray, labels: list) -> list:
         def recognizer(img: np.ndarray) -> tuple:
-            img = resize_norm_img(img, self.rec_img_h, self.rec_img_w)[0]
+            img = resize_norm_img(img, self.rec_img_h, self.rec_img_w or img.shape[1],
+                                  True if self.rec_img_w else img.shape[0] < self.rec_img_h)[0]
             img = torch.from_numpy(img).to(self.device)
             prediction = self.rec_model(img.unsqueeze(0))
             return self.rec_post_process(prediction)
