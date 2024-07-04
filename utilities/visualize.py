@@ -1,7 +1,7 @@
 import cv2 as cv
 import numpy as np
 
-from sub_ocr.utils import read_image, rescale, pascal_voc_bb, flatten_iter, crop_image
+from sub_ocr.utils import read_image, rescale, pascal_voc_bb, crop_image
 
 
 def get_scale_factor(img_frame: np.ndarray, img_target_height: int = 600) -> float:
@@ -29,7 +29,7 @@ def visualize_np_image(image: np.ndarray, title: str, dsp_time: int) -> None:
     display_image(image, f"{f'{title} - ' if title else title}Image Rescale Value: {scale}", dsp_time)
 
 
-def visualize_dataset(dataset, num: int = 5, dsp_time: int = 2) -> None:
+def visualize_dataset(dataset, num: int = 4, dsp_time: int = 2) -> None:
     print("Visualizing dataset...")
     ds_len = len(dataset)
     for _ in range(num):
@@ -37,7 +37,7 @@ def visualize_dataset(dataset, num: int = 5, dsp_time: int = 2) -> None:
         data = dataset[idx]
         print(f"Image Path: {data['image_path']}, Text: {data.get('text')}")
         for key, val in data.items():
-            if isinstance(val, np.ndarray):
+            if isinstance(val, np.ndarray) and (len(val.shape) == 2 or len(val.shape) == 3):
                 visualize_np_image(val, key, dsp_time)
 
 
@@ -49,7 +49,6 @@ def visualize_data(image_path: str, labels: list, crop_bbox: bool = True, put_te
     for label in labels:
         bbox, text = label.get("bbox"), label.get("text")
         if bbox:
-            bbox = tuple(flatten_iter(bbox))
             bbox = rescale(scale, bbox=bbox) if scale else bbox
             if crop_bbox and len(labels) == 1:
                 _, image = crop_image(image, image_height, image_width, bbox)

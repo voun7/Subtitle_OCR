@@ -1,0 +1,60 @@
+Hyperparameters:
+  num_epochs: 10
+  batch_size: 12
+  val_batch_size: 1
+  patience: 2
+  num_workers: 4
+
+Architecture:
+  model_type: det
+  algorithm: DB
+  Transform: null
+  Backbone:
+    name: PPHGNet_small
+    det: True
+  Neck:
+    name: LKPAN
+    out_channels: 256
+    intracl: true
+  Head:
+    name: PFHeadLocal
+    k: 50
+    mode: "large"
+
+
+Loss:
+  name: DBLoss
+  balance_loss: true
+  main_loss_type: DiceLoss
+  alpha: 5
+  beta: 10
+  ohem_ratio: 3
+
+Optimizer:
+  name: Adam
+  lr: 0.001
+
+PostProcess:
+  name: DBPostProcess
+  thresh: 0.3
+  box_thresh: 0.6
+  max_candidates: 1000
+  unclip_ratio: 1.5
+
+Metric:
+  name: DetMetric
+  main_indicator: hmean
+
+Dataset:
+  name: TextDetectionDataset
+  image_height: 640
+  image_width: 640
+  preprocesses:
+    - MakeBorderAndShrinkMap:
+  tensor_keys:
+    - image
+    - shrink_map
+    - shrink_mask
+    - threshold_map
+    - threshold_mask
+

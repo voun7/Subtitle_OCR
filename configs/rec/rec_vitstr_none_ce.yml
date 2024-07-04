@@ -1,0 +1,46 @@
+Hyperparameters:
+  num_epochs: 10
+  batch_size: 64
+  val_batch_size: 256
+  patience: 2
+  num_workers: 4
+
+Optimizer:
+  name: Adadelta
+  eps: 1.e-8
+  rho: 0.95
+  lr: 1.0
+
+Architecture:
+  model_type: rec
+  algorithm: ViTSTR
+  in_channels: 1
+  Transform:
+  Backbone:
+    name: ViTSTR
+    scale: tiny
+  Neck:
+    name: SequenceEncoder
+    encoder_type: reshape
+  Head:
+    name: CTCHead
+
+Loss:
+  name: CELoss
+  with_all: True
+  ignore_index: &ignore_index 0 # Must be zero or greater than the number of character classes
+
+PostProcess:
+  name: ViTSTRLabelDecode
+
+Metric:
+  name: RecMetric
+
+Dataset:
+  name: TextRecognitionDataset
+  image_height: 224
+  image_width: 224
+  preprocesses:
+    - ViTSTRLabelEncode:
+        ignore_index: *ignore_index
+        max_text_length: 25

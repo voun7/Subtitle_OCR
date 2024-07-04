@@ -1,30 +1,10 @@
 import math
 from itertools import batched
 from pathlib import Path
-from typing import NewType, Iterable, Generator
+from typing import Iterable, Generator
 
 import cv2 as cv
 import numpy as np
-
-
-class Types:
-    ModelType = NewType('ModelType', str)
-    ModelName = NewType('ModelName', str)
-    DataType = NewType('DataType', str)
-    Language = NewType('Language', str)
-
-    det = ModelType("Detection")
-    rec = ModelType("Recognition")
-
-    db = ModelName("DB")
-    crnn = ModelName("CRNN")
-    svtr = ModelName("SVTR")
-
-    train = DataType("train")  # Training
-    val = DataType("val")  # Validation
-
-    english = Language("en")
-    chinese = Language("ch")
 
 
 def pairwise_tuples(data):
@@ -48,9 +28,10 @@ def pascal_voc_bb(bbox: tuple) -> tuple:
     pascal_voc is a format used by the Pascal VOC dataset. Coordinates of a bounding box are encoded with four
     values in pixels: [x_min, y_min, x_max, y_max]. x_min and y_min are coordinates of the top-left corner of
     the bounding box. x_max and y_max are coordinates of bottom-right corner of the bounding box.
-    :param bbox: bbox with eight values representing x1,y1,x2,y2,x3,y3,x4,y4.
+    :param bbox: bbox with eight values representing ((x1,y1),(x2,y2),(x3,y3),(x4,y4)).
     :return: x_min, y_min, x_max, y_max
     """
+    bbox = tuple(flatten_iter(bbox))
     x_values, y_values = bbox[::2], bbox[1::2]
     return min(x_values), min(y_values), max(x_values), max(y_values)
 
@@ -69,16 +50,16 @@ def read_image(image_path: str, rgb: bool = True) -> tuple:
     return image, image_height, image_width
 
 
-def rescale(scale: float, frame: np.ndarray = None, bbox: tuple = None) -> np.ndarray | tuple:
+def rescale(scale: float, frame: np.ndarray = None, bbox: tuple | list = None) -> np.ndarray | tuple:
     """
     Method to rescale any image frame or bbox using scale.
-    Bbox is returned as an integer. This function should be used only for visualization.
+    BBox is returned as an integer. BBox should be used be pairwise.
     """
     if frame is not None:
         return cv.resize(frame, None, fx=scale, fy=scale)
 
     if bbox:
-        return tuple(map(lambda c: c * scale, bbox))
+        return pairwise_tuples(map(lambda c: c * scale, flatten_iter(bbox)))
 
 
 def bbox_area(x_min: int, y_min: int, x_max: int, y_max: int) -> float:
@@ -89,7 +70,7 @@ def crop_image(image: np.ndarray, image_height: int, image_width: int, bbox: tup
     """
     Crop image using bbox. If cropping fails a blank image will be created with the height and width.
     """
-    blank_image, bbox = False, pascal_voc_bb(tuple(flatten_iter(bbox)))
+    blank_image, bbox = False, pascal_voc_bb(bbox)
     x_min, y_min, x_max, y_max = map(int, bbox)
     if not bbox_area(x_min, y_min, x_max, y_max):
         x_min, y_min, x_max, y_max = map(round, bbox)
@@ -102,29 +83,40 @@ def crop_image(image: np.ndarray, image_height: int, image_width: int, bbox: tup
     return blank_image, cropped_image
 
 
-def resize_norm_img(image: np.ndarray, target_height: int, target_width: int, pad: bool = True) -> tuple:
+def resize_norm_img(image: np.ndarray, height: int, width: int, pad: bool = True, m32: bool = False) -> tuple:
     """
-    Image scaling and normalization
-    :return: resized normalized image and the rescale value
+    Image scaling and normalization. The aspect ratio of the image does not change.
+    :param image: image to be resized.
+    :param height: target height for resized image.
+    :param width: target width for resized image.
+    :param pad: should image be padded to reach target height and with.
+    :param m32: should resized image shape be a multiple of 32.
+    :return: resized normalized image ([H, W, C] to [C, H, W]) and the rescale value
     """
     # Calculate the scaling factor to resize the image
-    scale = min(target_height / image.shape[0], target_width / image.shape[1])
+    scale = min(height / image.shape[0], width / image.shape[1])
+    resize_h, resize_w = image.shape[0] * scale, image.shape[1] * scale
+
+    if m32:
+        resize_h, resize_w = round(resize_h / 32) * 32, round(resize_w / 32) * 32
+        # scale might need to be recalculated when m32 is used.
+
     # Resize the image while maintaining aspect ratio
-    resized_image = rescale(scale, image)
+    resized_image = cv.resize(image, (int(resize_w), int(resize_h)))
     if pad:  # Add padding if requested
-        pad_h, pad_w = target_height - resized_image.shape[0], target_width - resized_image.shape[1]
+        pad_h, pad_w = height - resized_image.shape[0], width - resized_image.shape[1]
         resized_image = cv.copyMakeBorder(resized_image, 0, pad_h, 0, pad_w, cv.BORDER_CONSTANT, value=(0, 0, 0))
     normalized_image = cv.normalize(resized_image, None, norm_type=cv.NORM_MINMAX, dtype=cv.CV_32F)
     image = np.moveaxis(normalized_image, -1, 0)  # change image data format from [H, W, C] to [C, H, W]
     return image, scale
 
 
-def read_chars(lang: Types.Language) -> str:
+def read_chars(lang: str) -> str:
     """
     Read the alphabet of the given language from the language file.
     """
-    alphabet_file = Path(__file__).parent / f"models/recognition/alphabets/{lang}.txt"
-    alphabet = " " + "".join([line.rstrip("\n") for line in alphabet_file.read_text(encoding="utf-8")])
+    alphabet_file = Path(__file__).parent / f"alphabets/{lang}.txt"
+    alphabet = "".join([line.rstrip("\n") for line in alphabet_file.read_text(encoding="utf-8")]) + " "
     return alphabet
 
 

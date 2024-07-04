@@ -75,7 +75,7 @@ class ModelTrainer:
         outputs = self.model(images)
         # Step 2 - Computes the loss and metrics
         loss = self.loss_fn(outputs, batch)
-        metric = self.metrics_fn(outputs, batch, False)
+        metric = self.metrics_fn(outputs, batch)
         # Step 3 - Computes gradients for both "x" and "y" parameters
         loss["loss"].backward()
         # Step 4 - Updates parameters using gradients and the learning rate
@@ -95,7 +95,7 @@ class ModelTrainer:
         outputs = self.model(images)
         # Step 2 - Computes the loss and metrics
         loss = self.loss_fn(outputs, batch)
-        metric = self.metrics_fn(outputs, batch, True)
+        metric = self.metrics_fn(outputs, batch)
         # There is no need to compute Steps 3 and 4, since we don't update parameters during evaluation
         return loss, metric
 

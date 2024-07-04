@@ -1,0 +1,73 @@
+Hyperparameters:
+  num_epochs: 10
+  batch_size: 12
+  val_batch_size: 1
+  patience: 2
+  num_workers: 4
+
+Architecture:
+  model_type: det
+  algorithm: FCE
+  Transform:
+  Backbone:
+    name: ResNet_vd
+    layers: 50
+    dcn_stage: [ False, True, True, True ]
+    out_indices: [ 1,2,3 ]
+  Neck:
+    name: FCEFPN
+    out_channels: 256
+    has_extra_convs: False
+    extra_stage: 0
+  Head:
+    name: FCEHead
+    fourier_degree: 5
+
+Loss:
+  name: FCELoss
+  fourier_degree: 5
+  num_sample: 50
+
+Optimizer:
+  name: Adam
+  lr: 0.0001
+
+PostProcess:
+  name: FCEPostProcess
+  scales: [ 8, 16, 32 ]
+  alpha: 1.0
+  beta: 1.0
+  fourier_degree: 5
+  box_type: 'poly'
+
+Metric:
+  name: DetFCEMetric
+  main_indicator: hmean
+
+Dataset:
+  name: TextDetectionDataset
+  image_height: 800
+  image_width: 800
+  transforms:
+    - ColorJitter:
+        brightness: 0.142
+        saturation: 0.5
+        contrast: 0.5
+    - RandomScaling:
+    - RandomCropFlip:
+        crop_ratio: 0.5
+    - RandomCropPolyInstances:
+        crop_ratio: 0.8
+        min_side_ratio: 0.3
+    - RandomRotatePolyInstances:
+        rotate_ratio: 0.5
+        max_angle: 30
+        pad_with_fixed_color: False
+    - SquareResizePad:
+        target_size: 800
+        pad_ratio: 0.6
+    - FCENetTargets:
+        fourier_degree: 5
+  preprocesses:
+    - MakeBorderAndShrinkMap:
+  tensor_keys: [ 'image', 'p3_maps', 'p4_maps', 'p5_maps' ]

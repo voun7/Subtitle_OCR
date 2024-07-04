@@ -5,42 +5,73 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from sub_ocr.models.detection import DB, DBPostProcess
-from sub_ocr.models.recognition import SVTR, LabelPostProcess
-from sub_ocr.utils import Types, read_image, read_chars, resize_norm_img, pascal_voc_bb, flatten_iter
+from sub_ocr.modeling import build_model
+from sub_ocr.postprocess import build_post_process
+from sub_ocr.utils import read_image, resize_norm_img, pascal_voc_bb
 
 logger = logging.getLogger(__name__)
 
 
 class SubtitleOCR:
-    supported_languages = [Types.english, ]
+    supported_languages = ["en", ]
 
-    def __init__(self, lang: Types.Language | str = Types.english, model_dir: str = "saved models") -> None:
+    det_configs = {
+        "en": {
+            "file_name": "en_det_ppocr_v3",
+            "Architecture": {'model_type': 'det', 'algorithm': 'DB', 'Transform': None,
+                             'Backbone': {'name': 'MobileNetV3', 'scale': 0.5, 'model_name': 'large',
+                                          'disable_se': True},
+                             'Neck': {'name': 'RSEFPN', 'out_channels': 96, 'shortcut': True},
+                             'Head': {'name': 'DBHead', 'k': 50}},
+            "resize": {"height": 960, "width": 960, "pad": False, "m32": True},
+            "PostProcess": {'name': 'DBPostProcess', 'thresh': 0.3, 'box_thresh': 0.6, 'max_candidates': 1000,
+                            'unclip_ratio': 1.5}
+        },
+        "ch": {
+            "file_name": "",
+            "Architecture": {},
+            "resize": {"height": 640, "width": 640, "pad": False, "m32": False},
+            "PostProcess": {}
+        }
+
+    }
+
+    rec_configs = {
+        "en": {
+            "file_name": "",
+            "Architecture": {},
+            "resize": {"height": 32, "width": 320, "pad": False, "m32": False},
+            "PostProcess": {}
+        },
+        "ch": {
+            "file_name": "",
+            "Architecture": {},
+            "resize": {"height": 32, "width": 320, "pad": False, "m32": False},
+            "PostProcess": {}
+        }
+
+    }
+
+    def __init__(self, lang: str = "en", model_dir: str = "saved models") -> None:
         assert lang in self.supported_languages, "Requested language not available!"
         self.models_dir, self.device = Path(model_dir), "cuda" if torch.cuda.is_available() else "cpu"
-        self.det_model, self.det_post_process, self.det_img_h, self.det_img_w = self.init_model(lang)
-        self.rec_model, self.rec_post_process, self.rec_img_h, self.rec_img_w = self.init_model(lang, Types.rec)
+        self.det_model, self.det_post_process, self.det_resize_params = self.init_model(lang)
+        self.rec_model, self.rec_post_process, self.rec_resize_params = self.init_model(lang, "rec")
 
-    def init_model(self, lang: Types.Language, model_type: Types.ModelType = Types.det) -> tuple:
+    def init_model(self, lang: str, model_type: str = "det") -> tuple:
         """
         Setup model and post processor.
         """
         assert self.models_dir.exists(), "Model save location not found!"
-        if model_type is Types.det:
-            backbone, image_h, image_w = "deformable_resnet50", 640, 640
-            model_params = {"backbone_name": backbone, "pretrained": False}
-            model, file = DB(**model_params), next(self.models_dir.glob(f"{lang} {Types.db} {backbone} *.pt"))
-            post_processor = DBPostProcess()
-        else:
-            alphabet, backbone, image_h, image_w = read_chars(lang), "", 48, None
-            model_params = {"num_class": len(alphabet) + 1}
-            model, file = SVTR(**model_params), next(self.models_dir.glob(f"{lang} {Types.svtr} {backbone} *.pt"))
-            post_processor = LabelPostProcess(alphabet)
+        config = self.det_configs[lang] if model_type == "det" else self.rec_configs[lang]
+        model_file = next(self.models_dir.glob(f"{config["file_name"]} *.pt"))
+        config.update({"lang": lang})
+        model, post_processor = build_model(config), build_post_process(config)
 
-        logger.debug(f"Device: {self.device}, Model Params: {model_params}, File: {file}")
-        model.load_state_dict(torch.load(file, map_location=self.device))
+        logger.debug(f"Device: {self.device}, Model Config: {config}, File: {model_file}")
+        model.load_state_dict(torch.load(model_file, map_location=self.device))
         model.to(self.device).eval()
-        return model, post_processor, image_h, image_w
+        return model, post_processor, config["resize"]
 
     @staticmethod
     def sort_merge_bboxes(bboxes: np.ndarray, threshold: int = 10) -> list:
@@ -71,7 +102,7 @@ class SubtitleOCR:
         return [{"bbox": merge(bbs)} for bbs in groups]
 
     def text_detector(self, image: np.ndarray, image_height: int, image_width: int) -> list:
-        image = resize_norm_img(image, self.det_img_h, self.det_img_w, False)[0]
+        image = resize_norm_img(image, **self.det_resize_params)[0]
         image = torch.from_numpy(image).to(self.device)
         prediction = self.det_model(image.unsqueeze(0))
         batch = {"shape": [(image_height, image_width)]}
@@ -83,14 +114,14 @@ class SubtitleOCR:
 
     def text_recognizer(self, image: np.ndarray, labels: list) -> list:
         def recognizer(img: np.ndarray) -> tuple:
-            img = resize_norm_img(img, self.rec_img_h, img.shape[1], img.shape[0] < self.rec_img_h)[0]
+            img = resize_norm_img(img, **self.rec_resize_params)[0]
             img = torch.from_numpy(img).to(self.device)
             prediction = self.rec_model(img.unsqueeze(0))
             return self.rec_post_process(prediction)
 
         if labels:
             for label in labels:
-                x_min, y_min, x_max, y_max = pascal_voc_bb(tuple(flatten_iter(label["bbox"])))
+                x_min, y_min, x_max, y_max = pascal_voc_bb(label["bbox"])
                 cropped_image = image[y_min:y_max, x_min:x_max]  # crop image with bbox
                 label["text"], label["score"] = recognizer(cropped_image)
         else:

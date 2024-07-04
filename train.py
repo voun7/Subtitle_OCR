@@ -1,13 +1,15 @@
 import logging
 import os
+from pathlib import Path
 
 import torch
+import yaml
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-from data.build_dataset import TextDetectionDataset, TextRecognitionDataset
-from sub_ocr.models.detection import DB, DBLoss, DBMetrics
-from sub_ocr.models.recognition import SVTR, CTCLoss, RecMetrics
-from sub_ocr.utils import Types, read_chars
+from data import build_dataset
+from sub_ocr.losses import build_loss
+from sub_ocr.metrics import build_metric
+from sub_ocr.modeling import build_model
 from utilities.logger_setup import setup_logging
 from utilities.telegram_bot import TelegramBot
 from utilities.trainer import ModelTrainer
@@ -16,87 +18,67 @@ from utilities.visualize import visualize_dataset
 logger = logging.getLogger(__name__)
 
 
-def train_text_detection(lang: Types.Language, model_dir: str) -> None:
-    # Setup hyperparameters
-    num_epochs = 10
-    batch_size, val_batch_size = 8, 1
-    patience, learning_rate = 2, 0.001
-    num_workers = 4
-    model_name, backbone = Types.db, "deformable_resnet50"
-    image_h, image_w = 640, 640
+def build_optimizer(model, config: dict):
+    opt_params = {"params": model.parameters(), "lr": config["lr"]}
+    if "epsilon" in config:
+        opt_params.update({"eps": config["epsilon"]})
+    if "weight_decay" in config:
+        opt_params.update({"weight_decay": config["weight_decay"]})
+    optimizer = getattr(torch.optim, config["name"])(**opt_params)
+    return optimizer
 
-    logger.info(f"Loading {lang} Text Detection Data...")
-    train_ds = TextDetectionDataset(lang, Types.train, model_name, image_h, image_w)
-    val_ds = TextDetectionDataset(lang, Types.val, model_name, image_h, image_w)
+
+def build_datasets(lang: str, config: dict) -> tuple:
+    dataset = getattr(build_dataset, config["name"])
+    return dataset(lang, "train", config), dataset(lang, "val", config)
+
+
+def train_model(model_dir: str, config_name: str, config: dict) -> None:
+    params, model = config["Hyperparameters"], build_model(config)
+    optimizer = build_optimizer(model, config["Optimizer"])
+    loss_fn, metric_fn = build_loss(config["Loss"]), build_metric(config)
+
+    logger.info(f"Loading {config_name} Data...")
+    train_ds, val_ds = build_datasets(config["lang"], config["Dataset"])
     logger.info(f"Loading Completed... Dataset Size Train: {len(train_ds):,}, Val: {len(val_ds):,}")
     visualize_dataset(train_ds)
 
-    model = DB(**{"backbone_name": backbone, "pretrained": False})
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    lr_scheduler = ReduceLROnPlateau(optimizer, patience=patience)
-    train_params = {
-        "loss_fn": DBLoss(), "metrics_fn": DBMetrics(), "optimizer": optimizer, "lr_scheduler": lr_scheduler,
-        "num_epochs": num_epochs,
-        "sanity_check": False,
-        "model_dir": model_dir, "model_filename": f"{lang} {model_name} {backbone}"
-    }
+    lr_scheduler = ReduceLROnPlateau(optimizer, patience=params["patience"])
+    train_params = {"loss_fn": loss_fn, "metrics_fn": metric_fn, "optimizer": optimizer, "lr_scheduler": lr_scheduler,
+                    "num_epochs": params["num_epochs"], "sanity_check": False,
+                    "model_dir": model_dir, "model_filename": f"{config_name}"}
     trainer = ModelTrainer(model, train_params)
-    trainer.set_loaders(train_ds, val_ds, batch_size, val_batch_size, num_workers)
+    trainer.set_loaders(train_ds, val_ds, params["batch_size"], params["val_batch_size"], params["num_workers"])
     trainer.load_checkpoint("")
     trainer.train()
 
 
-def train_text_recognition(lang: Types.Language, model_dir: str) -> None:
-    # Setup hyperparameters
-    num_epochs = 10
-    batch_size, val_batch_size = 64, 512
-    patience, learning_rate = 2, 0.0005
-    num_workers = 10
-    model_name, backbone = Types.svtr, ""
-    image_h, image_w = 48, 320
-
-    logger.info(f"Loading {lang} Text Recognition Data...")
-    train_ds = TextRecognitionDataset(lang, Types.train, model_name, image_h, image_w)
-    val_ds = TextRecognitionDataset(lang, Types.val, model_name, image_h, image_w)
-    logger.info(f"Loading Completed... Dataset Size Train: {len(train_ds):,}, Val: {len(val_ds):,}")
-    visualize_dataset(train_ds)
-
-    alphabet = read_chars(lang)
-    model = SVTR(**{"num_class": len(alphabet) + 1})
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    lr_scheduler = ReduceLROnPlateau(optimizer, patience=patience)
-    train_params = {
-        "loss_fn": CTCLoss(alphabet), "metrics_fn": RecMetrics(alphabet), "optimizer": optimizer,
-        "lr_scheduler": lr_scheduler,
-        "num_epochs": num_epochs,
-        "sanity_check": False,
-        "model_dir": model_dir, "model_filename": f"{lang} {model_name} {backbone}"
-    }
-    trainer = ModelTrainer(model, train_params)
-    trainer.set_loaders(train_ds, val_ds, batch_size, val_batch_size, num_workers)
-    trainer.load_checkpoint("")
-    trainer.train()
-
-
-def main(lang: Types.Language, model_type: Types.ModelType) -> None:
+def main() -> None:
+    """
+    Setup training from here.
+    """
     tb, username = TelegramBot(), os.getlogin()
+
     model_dir = rf"C:\Users\{username}\OneDrive\Backups\Subtitle OCR Models"
-    assert model_type in [Types.det, Types.rec], f"Model type must be either {Types.det} or {Types.rec}"
+    config_file, lang = Path("configs/rec/PP-OCRv4/en_PP-OCRv4_rec.yml"), "test"
+
+    config_name = config_file.stem if lang in config_file.stem else f"{lang}_{config_file.stem}"
+    config = yaml.safe_load(config_file.read_text(encoding="utf-8"))
+    config.update({"lang": lang})
+    logger.debug(f"{config_name=}, {config=}")
+
     try:
-        if model_type == Types.det:
-            train_text_detection(lang, model_dir)
-        else:
-            train_text_recognition(lang, model_dir)
-        tb.send_telegram_message(f"Text {model_type} Model Training Done!")
+        train_model(model_dir, config_name, config)
+        tb.send_telegram_message(f"Model Config: {config_name}, Training Completed!")
     except Exception as error:
-        error_msg = f"During Text {model_type} training an error occurred:\n{error}"
+        error_msg = f"During Model Config: {config_name}, training an error occurred:\n{error}"
         logger.exception(f"\n{error_msg}")
         tb.send_telegram_message(error_msg)
 
 
 if __name__ == '__main__':
     setup_logging("training")
-    TelegramBot.credential_file = "credentials/telegram auth.json"
+    # TelegramBot.credential_file = "credentials/telegram auth.json"
     logger.debug("Logging Started")
-    main(Types.english, Types.rec)
+    main()
     logger.debug("Logging Ended")

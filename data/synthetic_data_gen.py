@@ -1,7 +1,5 @@
 import subprocess
 
-from sub_ocr.utils import Types
-
 
 def generate_trdg_images() -> None:
     """
@@ -22,7 +20,7 @@ def generate_trdg_images() -> None:
     ImageFile.LOAD_TRUNCATED_IMAGES = True
     """
     dataset_dir = r"C:\Users\Victor\Documents\Python Datasets\Subtitle_OCR\TRDG Synthetic Images"
-    lang = Types.english
+    lang = "en"
     command = [
         "trdg",
         "--output_dir", f"{dataset_dir}/{lang}",  # The output directory.
