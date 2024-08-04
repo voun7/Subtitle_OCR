@@ -57,4 +57,4 @@ Dataset:
   image_width: 256
   preprocesses:
     - CTCLabelEncode:
-        max_text_length: 25
+        max_text_length: 80

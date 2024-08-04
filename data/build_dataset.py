@@ -1,3 +1,5 @@
+import logging
+
 import imgaug.augmenters as iaa
 import numpy as np
 from imgaug.augmentables import Keypoint, KeypointsOnImage
@@ -110,8 +112,12 @@ class TextRecognitionDataset(Dataset):
         if self.data_type == "train":
             image = self.transform.augment_image(image)
         image, text = resize_norm_img(image, self.image_height, self.image_width)[0], " " if blank else text
-        data = {"image_path": str(image_path), "image": image, "text": text, "label": text}
+        data = {"image_path": str(image_path), "image": image, "text": text}
         if self.preprocesses:
             for process in self.preprocesses:
-                process(data)
+                data = process(data)
+                if data is None:
+                    logger = logging.getLogger(__name__)
+                    logger.debug(f"Data processing failed for: {image_path}\n{process=}, {text=}")
+                    return self.__getitem__(np.random.randint(self.__len__()))
         return data

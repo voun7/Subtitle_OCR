@@ -418,7 +418,7 @@ def load_data(lang: str, model_type: str, data_type: str) -> list:
         elif model_type == "rec":
             return merge_data_sources(
                 ICDAR2015Data(data_type, model_type),
-                SynthTextData(data_type, model_type),
+                # SynthTextData(data_type, model_type),
                 TextOCR01Data(data_type, model_type),
                 TRDGSyntheticData(lang, data_type)
             )

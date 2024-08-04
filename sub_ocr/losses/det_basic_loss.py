@@ -118,6 +118,6 @@ class BCELoss(nn.Module):
         super().__init__()
         self.reduction = reduction
 
-    def forward(self, input, label):
-        loss = F.binary_cross_entropy(input, label, reduction=self.reduction)
+    def forward(self, input_, label, **_):
+        loss = F.binary_cross_entropy(input_, label, reduction=self.reduction)
         return loss

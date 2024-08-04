@@ -62,10 +62,7 @@ class TestBuildModel(TestCase):
             with self.subTest(f"File: {config_file}", i=i):
                 config = yaml.safe_load(config_file.read_text(encoding="utf-8"))
                 model = build_model(config | {"lang": "en"}).train()
-                if config_file.name == "rec_vitstr_none_ce.yml":
-                    _ = model(torch.rand([4, 1, config["Dataset"]["image_height"], config["Dataset"]["image_width"]]))
-                else:
-                    _ = model(torch.rand([4, 3, config["Dataset"]["image_height"], config["Dataset"]["image_width"]]))
+                _ = model(torch.rand([4, 3, config["Dataset"]["image_height"], config["Dataset"]["image_width"]]))
                 print(f"Config: {config_file}, passed {test_name} test.")
 
     def test_rec_model_eval_forward_pass(self) -> None:
@@ -75,10 +72,7 @@ class TestBuildModel(TestCase):
             with self.subTest(f"File: {config_file}", i=i):
                 config = yaml.safe_load(config_file.read_text(encoding="utf-8"))
                 model = build_model(config | {"lang": "en"}).eval()
-                if config_file.name == "rec_vitstr_none_ce.yml":
-                    _ = model(torch.rand([4, 1, config["Dataset"]["image_height"], config["Dataset"]["image_width"]]))
-                else:
-                    _ = model(torch.rand([4, 3, config["Dataset"]["image_height"], config["Dataset"]["image_width"]]))
+                _ = model(torch.rand([4, 3, config["Dataset"]["image_height"], config["Dataset"]["image_width"]]))
                 print(f"Config: {config_file}, passed {test_name} test.")
 
 

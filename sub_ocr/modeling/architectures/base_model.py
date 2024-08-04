@@ -54,7 +54,7 @@ class BaseModel(nn.Module):
             self.use_head = True
             config['Head']['in_channels'] = in_channels
             if config['model_type'] == 'rec':
-                char_num = len(read_chars(lang))
+                char_num = len(read_chars(lang)) + 1
                 config['Head']['out_channels'] = char_num
             self.head = build_head(config["Head"], **kwargs)
 

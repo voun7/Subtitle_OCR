@@ -8,8 +8,8 @@ from sub_ocr.postprocess import rec_postprocess as dec
 class TestRecDataEncodeDecode(TestCase):
     def test_encoding_decoding(self) -> None:
         lang, mx_txt_len = "en", 25
-        test_text = {"label": "This is @ Sample Text."}
-        enc_decs = ["CTCLabel", "AttnLabel", "NRTRLabel", "ViTSTRLabel"]
+        test_text = {"text": "This is @ Sample Text."}
+        enc_decs = ["CTCLabel"]
 
         print("\nTesting encoding and decoding of labels...")
         for i, name in enumerate(enc_decs):
@@ -18,5 +18,5 @@ class TestRecDataEncodeDecode(TestCase):
                 encoded_text = encoder(copy.deepcopy(test_text))
                 decoded_text = decoder.decode([encoded_text["label"]])
                 decoded_text = decoded_text[0][0].replace("<s>", "")
-                self.assertEqual(test_text["label"], decoded_text)
+                self.assertEqual(test_text["text"], decoded_text)
                 print(f"{name} passed test...")

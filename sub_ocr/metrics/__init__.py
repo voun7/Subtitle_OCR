@@ -1,8 +1,8 @@
 import copy
 
 from .det_db_metric import DBMetric
-from .det_metric import DetMetric, DetFCEMetric
-from .rec_metric import RecMetric, CNTMetric, CANMetric
+from .det_metric import DetMetric
+from .rec_metric import RecMetric
 from ..postprocess import build_post_process
 
 
@@ -10,7 +10,7 @@ def build_metric(config):
     """
     The entire config dict is required.
     """
-    support_dict = ["DetMetric", "DBMetric", "DetFCEMetric", "RecMetric", "CNTMetric", "CANMetric"]
+    support_dict = ["DetMetric", "DBMetric", "RecMetric"]
     if config["Architecture"]["model_type"] == "rec":
         config = config["Metric"] | {"post_processor": build_post_process(config)}
     else:

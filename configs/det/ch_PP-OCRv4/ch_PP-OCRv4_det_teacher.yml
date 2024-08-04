@@ -42,8 +42,7 @@ PostProcess:
   unclip_ratio: 1.5
 
 Metric:
-  name: DetMetric
-  main_indicator: hmean
+  name: DBMetric
 
 Dataset:
   name: TextDetectionDataset

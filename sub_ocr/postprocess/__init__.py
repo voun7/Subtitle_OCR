@@ -6,15 +6,10 @@ def build_post_process(config):
     The entire config dict is required.
     """
     from .db_postprocess import DBPostProcess
-    from .east_postprocess import EASTPostProcess
-    from .fce_postprocess import FCEPostProcess
 
-    from .rec_postprocess import CTCLabelDecode, AttnLabelDecode, NRTRLabelDecode, ViTSTRLabelDecode, CANLabelDecode
+    from .rec_postprocess import CTCLabelDecode
 
-    support_dict = [
-        'DBPostProcess', 'EASTPostProcess', 'FCEPostProcess', 'CTCLabelDecode', 'AttnLabelDecode', 'NRTRLabelDecode',
-        'ViTSTRLabelDecode', 'CANLabelDecode'
-    ]
+    support_dict = ['DBPostProcess', 'CTCLabelDecode']
     lang = config["lang"]
     if "Decode" in config["PostProcess"]["name"]:
         config = config["PostProcess"] | {"lang": lang}

@@ -69,16 +69,16 @@ def main() -> None:
 
     try:
         train_model(model_dir, config_name, config)
-        tb.send_telegram_message(f"Model Config: {config_name}, Training Completed!")
+        tb.send_telegram_message(f"Model Training Completed! {config_name=}")
     except Exception as error:
-        error_msg = f"During Model Config: {config_name}, training an error occurred:\n{error}"
+        error_msg = f"During Model Training an error occurred! {config_name=}\n{error=}"
         logger.exception(f"\n{error_msg}")
         tb.send_telegram_message(error_msg)
 
 
 if __name__ == '__main__':
     setup_logging("training")
-    # TelegramBot.credential_file = "credentials/telegram auth.json"
+    TelegramBot.credential_file = "credentials/telegram auth.json"
     logger.debug("Logging Started")
     main()
     logger.debug("Logging Ended")

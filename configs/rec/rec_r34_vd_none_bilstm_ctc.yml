@@ -39,4 +39,4 @@ Dataset:
   image_width: 100
   preprocesses:
     - CTCLabelEncode:
-        max_text_length: 40
+        max_text_length: 80

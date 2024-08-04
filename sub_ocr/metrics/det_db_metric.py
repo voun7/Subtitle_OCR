@@ -53,12 +53,6 @@ class QuadMetrics:
             results.append(self.evaluator.evaluate_image(gt, pred))
         return results
 
-    def validate_measure(self, batch, output, box_thresh=0.6):
-        return self.measure(batch, output, box_thresh)
-
-    def evaluate_measure(self, batch, output):
-        return self.measure(batch, output), np.linspace(0, batch['image'].shape[0]).tolist()
-
     def gather_measure(self, raw_metrics):
         raw_metrics = [image_metrics for batch_metrics in raw_metrics for image_metrics in batch_metrics]
 
@@ -98,11 +92,12 @@ class RunningScore:
                 pass
 
     def get_scores(self):
-        """Returns accuracy score evaluation result.
-            - overall accuracy
-            - mean accuracy
-            - mean IU
-            - fwavacc
+        """
+        Returns accuracy score evaluation result.
+        - overall accuracy
+        - mean accuracy
+        - mean IU
+        - fwavacc
         """
         hist = self.confusion_matrix
         acc = np.diag(hist).sum() / (hist.sum() + 0.0001)
@@ -110,10 +105,7 @@ class RunningScore:
         acc_cls = np.nanmean(acc_cls)
         iu = np.diag(hist) / (hist.sum(axis=1) + hist.sum(axis=0) - np.diag(hist) + 0.0001)
         mean_iu = np.nanmean(iu)
-        freq = hist.sum(axis=1) / (hist.sum() + 0.0001)
-        fwavacc = (freq[freq > 0] * iu[freq > 0]).sum()
-        cls_iu = dict(zip(range(self.n_classes), iu))
-        return {'Overall Acc': acc, 'Mean Acc': acc_cls, 'FreqW Acc': fwavacc, 'Mean IoU': mean_iu}, cls_iu
+        return {'Overall Acc': acc, 'Mean Acc': acc_cls, 'Mean IoU': mean_iu}
 
     def reset(self):
         self.confusion_matrix = np.zeros((self.n_classes, self.n_classes))
@@ -135,7 +127,7 @@ def cal_text_score(texts, gt_texts, training_masks, running_metric_text, thresh=
     gt_text = gt_texts.data.cpu().numpy() * training_masks
     gt_text = gt_text.astype(np.int32)
     running_metric_text.update(gt_text, pred_text)
-    score_text, _ = running_metric_text.get_scores()
+    score_text = running_metric_text.get_scores()
     return score_text
 
 
@@ -147,11 +139,9 @@ class DBMetric:
         self.raw_metrics = []
 
     def __call__(self, predictions: torch.Tensor, batch: dict, validation: bool) -> dict:
-        shrink_maps = predictions[:, 0, :, :]
-        score_shrink_map = cal_text_score(shrink_maps, batch['shrink_map'], batch['shrink_mask'],
+        score_shrink_map = cal_text_score(predictions[:, 0, :, :], batch['shrink_map'], batch['shrink_mask'],
                                           self.running_metric_text, thresh=0.25)
-        accuracy = score_shrink_map['Mean Acc']
-        iou_shrink_map = score_shrink_map['Mean IoU']
+        accuracy, iou_shrink_map = score_shrink_map['Mean Acc'], score_shrink_map['Mean IoU']
         if validation:
             assert predictions.size(1) == 2 and predictions.size(0) == 1, "Validation batch size must be 1!"
             bboxes, scores = self.post_process(batch, predictions)
@@ -159,7 +149,7 @@ class DBMetric:
             self.raw_metrics.append(raw_metric)
         return dict(accuracy=accuracy, iou_shrink_map=iou_shrink_map)
 
-    def gather_val_metrics(self) -> dict:
+    def get_metric(self) -> dict:
         """
         This method is validation metrics that are generated per epoch instead of per batch.
         """

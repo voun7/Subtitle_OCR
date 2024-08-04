@@ -99,19 +99,19 @@ class TPSSpatialTransformer(nn.Module):
         self.target_coordinate_repr = target_coordinate_repr
         self.target_control_points = target_control_points
 
-    def forward(self, input, source_control_points):
+    def forward(self, input_, source_control_points):
         assert source_control_points.ndimension() == 3
         assert source_control_points.shape[1] == self.num_control_points
         assert source_control_points.shape[2] == 2
         batch_size = source_control_points.size(0)
 
-        Y = torch.cat([source_control_points, self.padding_matrix.expand(batch_size, 3, 2)], 1)
-        mapping_matrix = torch.matmul(self.inverse_kernel, Y)
-        source_coordinate = torch.matmul(self.target_coordinate_repr, mapping_matrix)
+        Y = torch.cat([source_control_points, self.padding_matrix.expand(batch_size, 3, 2).to(input_.device)], 1)
+        mapping_matrix = torch.matmul(self.inverse_kernel.to(input_.device), Y)
+        source_coordinate = torch.matmul(self.target_coordinate_repr.to(input_.device), mapping_matrix)
 
         grid = torch.reshape(source_coordinate, shape=[-1, self.target_height, self.target_width, 2])
         grid = torch.clamp(grid, 0, 1)  # the source_control_points may be out of [0, 1].
         # the input to grid_sample is normalized [-1, 1], but what we get is [0, 1]
         grid = 2.0 * grid - 1.0
-        output_maps = grid_sample(input, grid, canvas=None)
+        output_maps = grid_sample(input_, grid, canvas=None)
         return output_maps, source_coordinate

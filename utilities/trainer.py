@@ -75,7 +75,7 @@ class ModelTrainer:
         outputs = self.model(images)
         # Step 2 - Computes the loss and metrics
         loss = self.loss_fn(outputs, batch)
-        metric = self.metrics_fn(outputs, batch)
+        metric = self.metrics_fn(outputs, batch, False)
         # Step 3 - Computes gradients for both "x" and "y" parameters
         loss["loss"].backward()
         # Step 4 - Updates parameters using gradients and the learning rate
@@ -95,7 +95,7 @@ class ModelTrainer:
         outputs = self.model(images)
         # Step 2 - Computes the loss and metrics
         loss = self.loss_fn(outputs, batch)
-        metric = self.metrics_fn(outputs, batch)
+        metric = self.metrics_fn(outputs, batch, True)
         # There is no need to compute Steps 3 and 4, since we don't update parameters during evaluation
         return loss, metric
 
@@ -227,8 +227,8 @@ class ModelTrainer:
         """
         current_lr = self.get_lr()
         self.learning_rates.append(current_lr)
-        if hasattr(self.metrics_fn, "gather_val_metrics"):
-            more_val_metric = self.metrics_fn.gather_val_metrics()
+        if hasattr(self.metrics_fn, "get_metric"):
+            more_val_metric = self.metrics_fn.get_metric()
             self.append_dict_val(more_val_metric, self.val_metrics), val_metric.update(more_val_metric)
         self.clear_previous_print()
         logger.info(f"Epoch: {self.total_epochs}/{self.num_epochs}, Current lr={current_lr},\n"

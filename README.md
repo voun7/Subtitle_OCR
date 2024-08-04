@@ -9,8 +9,8 @@ The training data is optimized for subtitle text images.
 
 ### Install Packages:
 
-```commandline
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+```
+pip install torch==2.3.1 torchvision==0.18.1 --index-url https://download.pytorch.org/whl/cu121
 ```
 
 ```commandline
@@ -18,10 +18,6 @@ pip install -r requirements.txt
 ```
 
 ### Build Package:
-
-```commandline
-pip install build
-```
 
 ```commandline
 python -m build

@@ -10,13 +10,10 @@ def build_backbone(config, model_type):
         from .rec_mobilenet_v3 import MobileNetV3
         from .rec_resnet_vd import ResNet
         from .rec_mv1_enhance import MobileNetV1Enhance
-        from .rec_nrtr_mtb import MTB
         from .rec_svtrnet import SVTRNet
-        from .rec_vitstr import ViTSTR
         from .rec_lcnetv3 import PPLCNetV3
         from .rec_hgnet import PPHGNet_small
-        support_dict = ['MobileNetV1Enhance', 'MobileNetV3', 'ResNet', 'MTB', 'SVTRNet', 'ViTSTR', 'PPLCNetV3',
-                        'PPHGNet_small']
+        support_dict = ['MobileNetV1Enhance', 'MobileNetV3', 'ResNet', 'SVTRNet', 'PPLCNetV3', 'PPHGNet_small']
     else:
         raise NotImplementedError
 

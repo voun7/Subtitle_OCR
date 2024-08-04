@@ -7,7 +7,7 @@ Hyperparameters:
 
 Optimizer:
   name: Adam
-  lr: 0.001
+  lr: 0.001  # larger learning rate need for chinese
 
 Architecture:
   model_type: rec
@@ -43,4 +43,4 @@ Dataset:
   image_width: 320
   preprocesses:
     - CTCLabelEncode:
-        max_text_length: 25
+        max_text_length: 80
