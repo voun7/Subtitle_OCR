@@ -26,7 +26,6 @@ Architecture:
     use_guide: True
   Head:
     name: CTCHead
-    fc_decay: 0.00001
 
 Loss:
   name: CTCLoss

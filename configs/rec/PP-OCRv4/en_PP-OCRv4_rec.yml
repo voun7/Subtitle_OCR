@@ -28,7 +28,6 @@ Architecture:
     use_guide: true
   Head:
     name: CTCHead
-    fc_decay: 1.0e-05
 
 Loss:
   name: CTCLoss

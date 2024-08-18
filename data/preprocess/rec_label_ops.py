@@ -8,9 +8,7 @@ class BaseRecLabelEncode:
 
     def __init__(self, lang: str, max_text_length: int) -> None:
         self.max_text_len = max_text_length
-
-        self.character_str = read_chars(lang)
-        dict_character = list(self.character_str)
+        dict_character = list(read_chars(lang))
         dict_character = self.add_special_char(dict_character)
         self.dict = {character: index for index, character in enumerate(dict_character)}
         self.character = dict_character

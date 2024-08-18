@@ -11,7 +11,7 @@ class Im2Seq(nn.Module):
 
     def forward(self, x):
         B, C, H, W = x.shape
-        # assert H == 1
+        assert H == 1
         x = x.squeeze(dim=2)
         x = x.permute(0, 2, 1)  # (NTC)(batch, width, channels)
         return x

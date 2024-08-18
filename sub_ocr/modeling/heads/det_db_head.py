@@ -7,7 +7,7 @@ from ..common import Activation
 
 
 class Head(nn.Module):
-    def __init__(self, in_channels, **kwargs):
+    def __init__(self, in_channels):
         super().__init__()
         self.conv1 = nn.Conv2d(
             in_channels=in_channels,
@@ -59,11 +59,11 @@ class DBHead(nn.Module):
         params(dict): super parameters for build DB network
     """
 
-    def __init__(self, in_channels, k=50, **kwargs):
+    def __init__(self, in_channels, k=50):
         super().__init__()
         self.k = k
-        self.binarize = Head(in_channels, **kwargs)
-        self.thresh = Head(in_channels, **kwargs)
+        self.binarize = Head(in_channels)
+        self.thresh = Head(in_channels)
 
     def step_function(self, x, y):
         return torch.reciprocal(1 + torch.exp(-self.k * (x - y)))
@@ -94,7 +94,7 @@ class LocalModule(nn.Module):
 
 class PFHeadLocal(DBHead):
     def __init__(self, in_channels, k=50, mode='small', **kwargs):
-        super().__init__(in_channels, k, **kwargs)
+        super().__init__(in_channels, k)
         self.mode = mode
 
         self.up_conv = nn.Upsample(scale_factor=2, mode="nearest")

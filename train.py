@@ -46,7 +46,7 @@ def train_model(model_dir: str, config_name: str, config: dict) -> None:
     lr_scheduler = ReduceLROnPlateau(optimizer, patience=params["patience"])
     train_params = {"loss_fn": loss_fn, "metrics_fn": metric_fn, "optimizer": optimizer, "lr_scheduler": lr_scheduler,
                     "num_epochs": params["num_epochs"], "sanity_check": False,
-                    "model_dir": model_dir, "model_filename": f"{config_name}"}
+                    "model_dir": model_dir, "model_filename": config_name}
     trainer = ModelTrainer(model, train_params)
     trainer.set_loaders(train_ds, val_ds, params["batch_size"], params["val_batch_size"], params["num_workers"])
     trainer.load_checkpoint("")

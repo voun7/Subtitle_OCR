@@ -1,5 +1,3 @@
-import logging
-
 import imgaug.augmenters as iaa
 import numpy as np
 from imgaug.augmentables import Keypoint, KeypointsOnImage
@@ -117,7 +115,5 @@ class TextRecognitionDataset(Dataset):
             for process in self.preprocesses:
                 data = process(data)
                 if data is None:
-                    logger = logging.getLogger(__name__)
-                    logger.debug(f"Data processing failed for: {image_path}\n{process=}, {text=}")
                     return self.__getitem__(np.random.randint(self.__len__()))
         return data

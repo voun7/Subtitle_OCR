@@ -38,10 +38,14 @@ class SubtitleOCR:
 
     rec_configs = {
         "en": {
-            "file_name": "",
-            "Architecture": {},
-            "resize": {"height": 32, "width": 320, "pad": False, "m32": False},
-            "PostProcess": {}
+            "file_name": "en_PP-OCRv4_rec",
+            "Architecture": {'model_type': 'rec', 'algorithm': 'SVTR_LCNet', 'Transform': None,
+                             'Backbone': {'name': 'PPLCNetV3', 'scale': 0.95},
+                             'Neck': {'name': 'SequenceEncoder', 'encoder_type': 'svtr', 'dims': 120, 'depth': 2,
+                                      'hidden_dims': 120, 'kernel_size': [1, 3], 'use_guide': True},
+                             'Head': {'name': 'CTCHead'}},
+            "resize": {"height": 48, "width": 320, "pad": True, "m32": False},
+            "PostProcess": {'name': 'CTCLabelDecode'}
         },
         "ch": {
             "file_name": "",
@@ -123,9 +127,9 @@ class SubtitleOCR:
             for label in labels:
                 x_min, y_min, x_max, y_max = pascal_voc_bb(label["bbox"])
                 cropped_image = image[y_min:y_max, x_min:x_max]  # crop image with bbox
-                label["text"], label["score"] = recognizer(cropped_image)
+                label["text"], label["score"] = recognizer(cropped_image)[0]
         else:
-            labels = [{"text": text, "score": score} for text, score in [recognizer(image)]]
+            labels = [{"text": result[0], "score": result[1]} for result in recognizer(image)]
         return labels
 
     @torch.no_grad()

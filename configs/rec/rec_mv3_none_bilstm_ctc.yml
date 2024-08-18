@@ -23,7 +23,6 @@ Architecture:
     hidden_size: 96
   Head:
     name: CTCHead
-    fc_decay: 0
 
 Loss:
   name: CTCLoss
@@ -40,4 +39,4 @@ Dataset:
   image_width: 100
   preprocesses:
     - CTCLabelEncode:
-        max_text_length: 80
+        max_text_length: 40

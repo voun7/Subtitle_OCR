@@ -22,7 +22,6 @@ Architecture:
     encoder_type: reshape
   Head:
     name: CTCHead
-    fc_decay: 0.0004
 
 Loss:
   name: CTCLoss
@@ -39,4 +38,4 @@ Dataset:
   image_width: 100
   preprocesses:
     - CTCLabelEncode:
-        max_text_length: 80
+        max_text_length: 40

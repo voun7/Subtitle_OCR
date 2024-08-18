@@ -9,7 +9,7 @@ from ...utils import read_chars
 
 class BaseModel(nn.Module):
 
-    def __init__(self, config, **kwargs):
+    def __init__(self, config):
         """
         the module for OCR.
         args:
@@ -38,7 +38,7 @@ class BaseModel(nn.Module):
             self.backbone = build_backbone(config["Backbone"], model_type)
             in_channels = self.backbone.out_channels
 
-        # Build neck. For rec, neck can be cnn,rnn or reshape (None). For det, neck can be FPN, BIFPN and so on.
+        # Build neck. For rec, neck can be cnn,rnn or reshape (None). For det, neck can be FPN and so on.
         if 'Neck' not in config or config['Neck'] is None:
             self.use_neck = False
         else:
@@ -54,9 +54,11 @@ class BaseModel(nn.Module):
             self.use_head = True
             config['Head']['in_channels'] = in_channels
             if config['model_type'] == 'rec':
-                char_num = len(read_chars(lang)) + 1
+                char_num = len(read_chars(lang))
+                if "CTC" in config['Head']['name']:
+                    char_num += 1
                 config['Head']['out_channels'] = char_num
-            self.head = build_head(config["Head"], **kwargs)
+            self.head = build_head(config["Head"])
 
         self._initialize_weights()
 

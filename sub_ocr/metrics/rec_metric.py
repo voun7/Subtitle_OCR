@@ -5,10 +5,7 @@ from rapidfuzz.distance import Levenshtein
 
 class RecMetric:
     def __init__(self, post_processor, is_filter=False, ignore_space=True):
-        self.post_processor = post_processor
-        self.is_filter = is_filter
-        self.ignore_space = ignore_space
-        self.eps = 1e-5
+        self.post_processor, self.is_filter, self.ignore_space = post_processor, is_filter, ignore_space
 
     def _normalize_text(self, text):
         text = "".join(filter(lambda x: x in (string.digits + string.ascii_letters), text))
@@ -29,4 +26,4 @@ class RecMetric:
         correct_num += correct_num
         all_num += all_num
         norm_edit_dis += norm_edit_dis
-        return {"acc": correct_num / (all_num + self.eps), "norm_edit_dis": 1 - norm_edit_dis / (all_num + self.eps)}
+        return {"acc": correct_num / all_num, "norm_edit_dis": 1 - norm_edit_dis / all_num}
