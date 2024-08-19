@@ -12,9 +12,6 @@ class CTCLoss(nn.Module):
         self.loss_func = nn.CTCLoss(zero_infinity=True)
 
     def forward(self, predicts: torch.Tensor, batch: dict) -> dict:
-        if isinstance(predicts, (list, tuple)):
-            predicts = predicts[-1]
-        predicts = predicts.permute(1, 0, 2)
         N, B, _ = predicts.shape
         preds_lengths = torch.tensor([N] * B)
         loss = self.loss_func(predicts, batch["label"], preds_lengths, batch["length"])

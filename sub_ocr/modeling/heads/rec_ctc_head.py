@@ -1,5 +1,4 @@
 import torch.nn as nn
-import torch.nn.functional as F
 
 
 class CTCHead(nn.Module):
@@ -21,7 +20,6 @@ class CTCHead(nn.Module):
             x = self.fc1(x)
             predicts = self.fc2(x)
 
-        if not self.training:
-            predicts = F.softmax(predicts, dim=2)
-
+        predicts = predicts.permute(1, 0, 2)  # B, T, C --> T, B, C  (Input sequence length, Batch size, No of classes)
+        predicts = predicts.log_softmax(2)
         return predicts

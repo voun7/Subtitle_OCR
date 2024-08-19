@@ -51,10 +51,9 @@ class CTCLabelDecode(BaseRecLabelDecode):
         super().__init__(lang)
 
     def __call__(self, preds):
-        if isinstance(preds, torch.Tensor):
-            preds = preds.detach().cpu().numpy()
-        preds_idx = preds.argmax(axis=2)
-        preds_prob = preds.max(axis=2)
+        preds_prob, preds_idx = preds.max(2)
+        preds_prob, preds_idx = preds_prob.transpose(1, 0), preds_idx.transpose(1, 0)
+        preds_prob, preds_idx = torch.exp(preds_prob).detach().cpu().numpy(), preds_idx.detach().cpu().numpy()
         text = self.decode(preds_idx, preds_prob, is_remove_duplicate=True)
         return text
 
