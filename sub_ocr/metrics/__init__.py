@@ -11,11 +11,7 @@ def build_metric(config):
     The entire config dict is required.
     """
     support_dict = ["DetMetric", "DBMetric", "RecMetric"]
-    if config["Architecture"]["model_type"] == "rec":
-        config = config["Metric"] | {"post_processor": build_post_process(config)}
-    else:
-        config = config["Metric"]
-
+    config = config["Metric"] | {"post_processor": build_post_process(config)}
     config = copy.deepcopy(config)
     module_name = config.pop("name")
     assert module_name in support_dict, f"{module_name} not supported, metric only supports {support_dict}"

@@ -56,9 +56,15 @@ class SubtitleOCR:
 
     }
 
-    def __init__(self, lang: str = "en", model_dir: str = "saved models") -> None:
+    def __init__(self, lang: str = "en", model_dir: str = "saved models", device: str = "cuda") -> None:
+        """
+        Subtitle OCR package.
+        :param lang: Language for text detection and recognition.
+        :param model_dir: Directory for model files.
+        :param device: Device to load model. GPU will only be used if it's requested and available.
+        """
         assert lang in self.supported_languages, "Requested language not available!"
-        self.models_dir, self.device = Path(model_dir), "cuda" if torch.cuda.is_available() else "cpu"
+        self.models_dir, self.device = Path(model_dir), device if torch.cuda.is_available() else "cpu"
         self.det_model, self.det_post_process, self.det_resize_params = self.init_model(lang)
         self.rec_model, self.rec_post_process, self.rec_resize_params = self.init_model(lang, "rec")
 

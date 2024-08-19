@@ -2,7 +2,6 @@ import numpy as np
 import torch
 
 from .eval_det_iou import DetectionIoUEvaluator
-from ..postprocess.db_postprocess import DBPostProcess
 
 
 class AverageMeter:
@@ -132,11 +131,9 @@ def cal_text_score(texts, gt_texts, training_masks, running_metric_text, thresh=
 
 
 class DBMetric:
-    def __init__(self, no_classes: int = 2) -> None:
-        self.post_process = DBPostProcess()
-        self.quad_metrics = QuadMetrics()
-        self.running_metric_text = RunningScore(no_classes)
-        self.raw_metrics = []
+    def __init__(self, post_processor, no_classes: int = 2) -> None:
+        self.post_process, self.quad_metrics = post_processor, QuadMetrics()
+        self.running_metric_text, self.raw_metrics = RunningScore(no_classes), []
 
     def __call__(self, predictions: torch.Tensor, batch: dict, validation: bool) -> dict:
         score_shrink_map = cal_text_score(predictions[:, 0, :, :], batch['shrink_map'], batch['shrink_mask'],

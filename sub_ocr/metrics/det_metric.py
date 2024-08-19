@@ -2,12 +2,11 @@ from .eval_det_iou import DetectionIoUEvaluator
 
 
 class DetMetric:
-    def __init__(self, main_indicator="hmean"):
-        self.evaluator = DetectionIoUEvaluator()
-        self.main_indicator = main_indicator
+    def __init__(self, post_processor):
+        self.post_processor, self.evaluator = post_processor, DetectionIoUEvaluator()
         self.reset()
 
-    def __call__(self, preds, batch, **kwargs):
+    def __call__(self, preds, batch, validation):
         """
         batch: a list produced by dataloaders.
             image: np.ndarray  of shape (N, C, H, W).
@@ -16,7 +15,7 @@ class DetMetric:
         preds: a list of dict produced by post process
              points: np.ndarray of shape (N, K, 4, 2), the polygons of objective regions.
         """
-        gt_polyons_batch = batch[2]
+        preds, gt_polyons_batch = self.post_processor(preds), batch["bboxes"]
         for pred, gt_polyons in zip(preds, gt_polyons_batch):
             # prepare gt
             gt_info_list = [{"bbox": gt_polyon, "text": ""} for gt_polyon in gt_polyons]
