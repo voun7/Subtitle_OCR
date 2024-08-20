@@ -26,7 +26,6 @@ class ModelTrainer:
         self.model = self.init_model(model)
         self.loss_fn, self.metrics_fn, self.optimizer = params["loss_fn"], params["metrics_fn"], params["optimizer"]
         self.lr_scheduler, self.num_epochs = params["lr_scheduler"], params["num_epochs"]
-        self.sanity_check = params["sanity_check"]
         self.model_dir, self.model_filename = Path(params["model_dir"]), Path(params["model_filename"])
         self.checkpoint_dir = self.model_dir / "Checkpoints"
         self.model_dir.mkdir(parents=True, exist_ok=True), self.checkpoint_dir.mkdir(exist_ok=True)
@@ -136,8 +135,6 @@ class ModelTrainer:
             pos = self.total_epochs + (index + 1) / num_of_batches
             print(f"\rEpoch: {pos:.3f}, Batch {mode} Loss: {batch_loss}, Metric: {batch_metric}", end="", flush=True)
 
-            if self.sanity_check is True:  # break the loop in case of sanity check
-                break
         logger.debug(f"Epoch: {self.total_epochs + 1}, Batch {mode} Duration: {self.dur_calc(start_time)}")
         loss = {loss_name: np.mean(loss_values) for loss_name, loss_values in batch_losses.items()}
         metric = {metric_name: np.mean(metric_values) for metric_name, metric_values in batch_metrics.items()}

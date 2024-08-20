@@ -13,8 +13,8 @@ class RecMetric:
 
     def __call__(self, predictions, batch, _):
         predictions = self.post_processor(predictions)
-        correct_num = all_num = norm_edit_dis = 0
-        for (prediction, _), (target) in zip(predictions, batch["text"]):
+        correct_num = idx = norm_edit_dis = 0
+        for idx, ((prediction, _), target) in enumerate(zip(predictions, batch["text"]), 1):
             if self.ignore_space:
                 prediction, target = prediction.replace(" ", ""), target.replace(" ", "")
             if self.is_filter:
@@ -22,8 +22,4 @@ class RecMetric:
             norm_edit_dis += Levenshtein.normalized_distance(prediction, target)
             if prediction == target:
                 correct_num += 1
-            all_num += 1
-        correct_num += correct_num
-        all_num += all_num
-        norm_edit_dis += norm_edit_dis
-        return {"acc": correct_num / all_num, "norm_edit_dis": 1 - norm_edit_dis / all_num}
+        return {"acc": correct_num / idx, "norm_edit_dis": 1 - norm_edit_dis / idx}

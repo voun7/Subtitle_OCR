@@ -144,7 +144,7 @@ class DBMetric:
             bboxes, scores = self.post_process(batch, predictions)
             raw_metric = self.quad_metrics.measure(batch, (bboxes, scores))
             self.raw_metrics.append(raw_metric)
-        return dict(accuracy=accuracy, iou_shrink_map=iou_shrink_map)
+        return dict(acc=accuracy, iou_shrink_map=iou_shrink_map)
 
     def get_metric(self) -> dict:
         """

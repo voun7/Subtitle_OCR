@@ -45,8 +45,7 @@ def train_model(model_dir: str, config_name: str, config: dict) -> None:
 
     lr_scheduler = ReduceLROnPlateau(optimizer, patience=params["patience"])
     train_params = {"loss_fn": loss_fn, "metrics_fn": metric_fn, "optimizer": optimizer, "lr_scheduler": lr_scheduler,
-                    "num_epochs": params["num_epochs"], "sanity_check": False,
-                    "model_dir": model_dir, "model_filename": config_name}
+                    "num_epochs": params["num_epochs"], "model_dir": model_dir, "model_filename": config_name}
     trainer = ModelTrainer(model, train_params)
     trainer.set_loaders(train_ds, val_ds, params["batch_size"], params["val_batch_size"], params["num_workers"])
     trainer.load_checkpoint("")
@@ -60,7 +59,7 @@ def main() -> None:
     tb, username = TelegramBot(), os.getlogin()
 
     model_dir = rf"C:\Users\{username}\OneDrive\Backups\Subtitle OCR Models"
-    config_file, lang = Path("configs/rec/PP-OCRv4/en_PP-OCRv4_rec.yml"), "test"
+    config_file, lang = Path("configs/det/det_ppocr_v3.yml"), "test"
 
     config_name = config_file.stem if lang in config_file.stem else f"{lang}_{config_file.stem}"
     config = yaml.safe_load(config_file.read_text(encoding="utf-8"))

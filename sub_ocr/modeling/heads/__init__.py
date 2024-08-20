@@ -1,11 +1,11 @@
 def build_head(config):
     # det head
-    from .det_db_head import DBHead, PFHeadLocal
+    from .det_db_head import DBHead
 
     # rec head
     from .rec_ctc_head import CTCHead
 
-    support_dict = ['DBHead', 'CTCHead', 'PFHeadLocal']
+    support_dict = ['DBHead', 'CTCHead']
 
     module_name = config.pop('name')
     assert module_name in support_dict, f'{module_name} not supported, head only supports {support_dict}'
