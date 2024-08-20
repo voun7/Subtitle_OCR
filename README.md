@@ -7,11 +7,19 @@ The training data is optimized for subtitle text images.
 
 ## Training Setup Instructions
 
+### Download and Install:
+
+[Latest Version of Microsoft Visual C++ Redistributable](https://learn.microsoft.com/en-US/cpp/windows/latest-supported-vc-redist)
+
 ### Install Packages:
+
+For GPU
 
 ```
 pip install torch==2.3.1 torchvision==0.18.1 --index-url https://download.pytorch.org/whl/cu121
 ```
+
+For CPU and/or Other Packages
 
 ```commandline
 pip install -r requirements.txt
