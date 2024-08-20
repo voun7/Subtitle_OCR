@@ -135,7 +135,7 @@ class SubtitleOCR:
                 cropped_image = image[y_min:y_max, x_min:x_max]  # crop image with bbox
                 label["text"], label["score"] = recognizer(cropped_image)[0]
         else:
-            labels = [{"text": result[0], "score": result[1]} for result in recognizer(image)]
+            labels = [{"text": text, "score": score} for text, score in recognizer(image)]
         return labels
 
     @torch.no_grad()
