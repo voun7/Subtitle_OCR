@@ -1,9 +1,10 @@
+import cv2 as cv
 import imgaug.augmenters as iaa
 import numpy as np
 from imgaug.augmentables import Keypoint, KeypointsOnImage
 from torch.utils.data import Dataset
 
-from sub_ocr.utils import read_image, resize_norm_img, rescale, crop_image
+from sub_ocr.utils import read_image, rescale, normalize_img, crop_image
 from .collate_fn import Collator
 from .data_source import load_data
 from .preprocess import rec_label_ops as enc
@@ -24,6 +25,22 @@ def create_preprocesses(config: dict, lang: str = None) -> list:
                 ops = eval(name)() if param is None else eval(name)(**param)
                 processes.append(ops)
     return processes
+
+
+def resize_norm_img(image: np.ndarray, height: int, width: int) -> tuple:
+    """
+    Image scaling and normalization for dataset. The aspect ratio of the image does not change.
+    Padding will be added to reach target height and width.
+    :param image: image to be resized.
+    :param height: target height for resized image.
+    :param width: target width for resized image.
+    :return: resized normalized image ([H, W, C] to [C, H, W]) and the rescale value
+    """
+    scale = min(height / image.shape[0], width / image.shape[1])  # Calculate the scaling factor to resize the image
+    resized_image = rescale(scale, image)  # Resize the image while maintaining aspect ratio
+    pad_h, pad_w = height - resized_image.shape[0], width - resized_image.shape[1]
+    resized_image = cv.copyMakeBorder(resized_image, 0, pad_h, 0, pad_w, cv.BORDER_CONSTANT, value=(0, 0, 0))
+    return normalize_img(resized_image), scale
 
 
 class TextDetectionDataset(Dataset):

@@ -7,7 +7,7 @@ import cv2 as cv
 import numpy as np
 
 
-def pairwise_tuples(data):
+def pairwise_tuples(data: Iterable) -> tuple:
     return tuple(batched(data, 2))
 
 
@@ -83,32 +83,10 @@ def crop_image(image: np.ndarray, image_height: int, image_width: int, bbox: tup
     return blank_image, cropped_image
 
 
-def resize_norm_img(image: np.ndarray, height: int, width: int, pad: bool = True, m32: bool = False) -> tuple:
-    """
-    Image scaling and normalization. The aspect ratio of the image does not change.
-    :param image: image to be resized.
-    :param height: target height for resized image.
-    :param width: target width for resized image.
-    :param pad: should image be padded to reach target height and with.
-    :param m32: should resized image shape be a multiple of 32.
-    :return: resized normalized image ([H, W, C] to [C, H, W]) and the rescale value
-    """
-    # Calculate the scaling factor to resize the image
-    scale = min(height / image.shape[0], width / image.shape[1])
-    resize_h, resize_w = image.shape[0] * scale, image.shape[1] * scale
-
-    if m32:
-        resize_h, resize_w = round(resize_h / 32) * 32, round(resize_w / 32) * 32
-        # scale might need to be recalculated when m32 is used.
-
-    # Resize the image while maintaining aspect ratio
-    resized_image = cv.resize(image, (int(resize_w), int(resize_h)))
-    if pad:  # Add padding if requested
-        pad_h, pad_w = height - resized_image.shape[0], width - resized_image.shape[1]
-        resized_image = cv.copyMakeBorder(resized_image, 0, pad_h, 0, pad_w, cv.BORDER_CONSTANT, value=(0, 0, 0))
-    normalized_image = cv.normalize(resized_image, None, norm_type=cv.NORM_MINMAX, dtype=cv.CV_32F)
-    image = np.moveaxis(normalized_image, -1, 0)  # change image data format from [H, W, C] to [C, H, W]
-    return image, scale
+def normalize_img(image: np.ndarray) -> np.ndarray:
+    image = cv.normalize(image, None, norm_type=cv.NORM_MINMAX, dtype=cv.CV_32F)
+    image = np.moveaxis(image, -1, 0)  # change image data format from [H, W, C] to [C, H, W]
+    return image
 
 
 def read_chars(lang: str) -> str:

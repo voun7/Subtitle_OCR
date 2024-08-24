@@ -2,12 +2,13 @@ import logging
 import os
 from pathlib import Path
 
+import cv2 as cv
 import numpy as np
 import torch
 
 from sub_ocr.modeling import build_model
 from sub_ocr.postprocess import build_post_process
-from sub_ocr.utils import read_image, resize_norm_img, pascal_voc_bb
+from sub_ocr.utils import read_image, normalize_img, pascal_voc_bb
 
 logger = logging.getLogger(__name__)
 
@@ -23,17 +24,16 @@ class SubtitleOCR:
                                           'disable_se': True},
                              'Neck': {'name': 'RSEFPN', 'out_channels': 96, 'shortcut': True},
                              'Head': {'name': 'DBHead', 'k': 50}},
-            "resize": {"height": 960, "width": 960, "pad": False, "m32": True},
+            "resize": {"height": 960, "width": 960, "m32": True},
             "PostProcess": {'name': 'DBPostProcess', 'thresh': 0.3, 'box_thresh': 0.6, 'max_candidates': 1000,
                             'unclip_ratio': 1.5}
         },
         "ch": {
             "file_name": "",
             "Architecture": {},
-            "resize": {"height": 640, "width": 640, "pad": False, "m32": False},
+            "resize": {"height": 640, "width": 640, "m32": True},
             "PostProcess": {}
         }
-
     }
 
     rec_configs = {
@@ -44,16 +44,15 @@ class SubtitleOCR:
                              'Neck': {'name': 'SequenceEncoder', 'encoder_type': 'svtr', 'dims': 120, 'depth': 2,
                                       'hidden_dims': 120, 'kernel_size': [1, 3], 'use_guide': True},
                              'Head': {'name': 'CTCHead'}},
-            "resize": {"height": 48, "width": 320, "pad": True, "m32": False},
+            "resize": {"height": 48, "width": 320},
             "PostProcess": {'name': 'CTCLabelDecode'}
         },
         "ch": {
             "file_name": "",
             "Architecture": {},
-            "resize": {"height": 32, "width": 320, "pad": False, "m32": False},
+            "resize": {"height": 48, "width": 320},
             "PostProcess": {}
         }
-
     }
 
     def __init__(self, lang: str = "en", model_dir: str = "saved models", device: str = "cuda") -> None:
@@ -78,10 +77,29 @@ class SubtitleOCR:
         config.update({"lang": lang})
         model, post_processor = build_model(config), build_post_process(config)
 
-        logger.debug(f"Device: {self.device}, Model Config: {config}, File: {model_file}")
+        logger.debug(f"Device: {self.device}, Model Config: {config},\nModel File: {model_file}")
         model.load_state_dict(torch.load(model_file, map_location=self.device))
         model.to(self.device).eval()
         return model, post_processor, config["resize"]
+
+    def det_image_resize(self, image: np.ndarray) -> np.ndarray:
+        scale = min(self.det_resize_params["height"] / image.shape[0], self.det_resize_params["width"] / image.shape[1])
+        resize_h, resize_w = image.shape[0] * scale, image.shape[1] * scale
+        if self.det_resize_params["m32"]:  # resized image shape as a multiple of 32.
+            resize_h, resize_w = round(resize_h / 32) * 32, round(resize_w / 32) * 32
+        # Resize the image while maintaining aspect ratio
+        resized_image = cv.resize(image, (int(resize_w), int(resize_h)))
+        return normalize_img(resized_image)
+
+    def rec_image_resize(self, image: np.ndarray) -> np.ndarray:
+        resize_h, resize_w = self.rec_resize_params["height"], self.rec_resize_params["width"]
+        image_h, image_w = image.shape[:2]
+        max_wh_ratio = max(resize_w / resize_h, image_w / image_h)
+        resize_w, ratio = resize_h * max_wh_ratio, image_w / image_h
+        if not resize_h * ratio > resize_w:
+            resize_w = resize_h * ratio
+        resized_image = cv.resize(image, (int(resize_w), resize_h))
+        return normalize_img(resized_image)
 
     @staticmethod
     def sort_merge_bboxes(bboxes: np.ndarray, threshold: int = 10) -> list:
@@ -112,7 +130,7 @@ class SubtitleOCR:
         return [{"bbox": merge(bbs)} for bbs in groups]
 
     def text_detector(self, image: np.ndarray, image_height: int, image_width: int) -> list:
-        image = resize_norm_img(image, **self.det_resize_params)[0]
+        image = self.det_image_resize(image)
         image = torch.from_numpy(image).to(self.device)
         prediction = self.det_model(image.unsqueeze(0))
         batch = {"shape": [(image_height, image_width)]}
@@ -124,7 +142,7 @@ class SubtitleOCR:
 
     def text_recognizer(self, image: np.ndarray, labels: list) -> list:
         def recognizer(img: np.ndarray) -> tuple:
-            img = resize_norm_img(img, **self.rec_resize_params)[0]
+            img = self.rec_image_resize(img)
             img = torch.from_numpy(img).to(self.device)
             prediction = self.rec_model(img.unsqueeze(0))
             return self.rec_post_process(prediction)
