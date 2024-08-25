@@ -151,6 +151,8 @@ class SubtitleOCR:
             for label in labels:
                 x_min, y_min, x_max, y_max = pascal_voc_bb(label["bbox"])
                 cropped_image = image[y_min:y_max, x_min:x_max]  # crop image with bbox
+                if not cropped_image.size:  # invalid crops will be skipped.
+                    continue
                 label["text"], label["score"] = recognizer(cropped_image)[0]
         else:
             labels = [{"text": text, "score": score} for text, score in recognizer(image)]
