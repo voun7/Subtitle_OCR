@@ -3,15 +3,11 @@ import subprocess
 
 def generate_trdg_images() -> None:
     """
-    Use trdg package to generate images with text for training model.
-    When random is off consider deleting all 1kb image files because their text are usually blended with the background.
-    pip install trdg
+    Use trdg package to generate synthetic images with text for training model.
+    Cleanup module should be used for deleting all images that have blended with the background.
+    pip install git+https://github.com/Belval/TextRecognitionDataGenerator.git (pip<24.1 required)
 
     Errors and Fixes (paste them directly in the package module)
-    ---------------------------------------------------
-    getsize() error:
-    left, top, right, bottom = image_font.getbbox(text)
-    return bottom
     ---------------------------------------------------
     from PIL import Image, ImageFile
     # PIL.Image.DecompressionBombError:
@@ -31,6 +27,7 @@ def generate_trdg_images() -> None:
         "--image_dir", f"{dataset_dir}/#Background_images",  # Image directory to use when background is set to image.
         "--text_color", "#FFFFFF",  # Text's color. "#000000,#FFFFFF" for black to white range.
         "--name_format", "2",  # Define how the produced files will be named.
+        "--format", "48",  # Define the height of the produced images if horizontal, else the width.
         # Rarely needed options.
         # "--font_dir", "data/#Fonts",  # Define a font directory to be used.
         # "--word_split",  # Split on words instead of on characters.
@@ -44,7 +41,7 @@ def generate_trdg_images() -> None:
         command.extend([
             "--language", "cn",  # The language to use. (trdg uses cn for chinese)
             "--length", "16",
-            # "--space_width", "0",  # Define the width of the spaces between words
+            "--space_width", "0",  # Define the width of the spaces between words
         ])
     print(f"Command: {' '.join(command)}")
     try:

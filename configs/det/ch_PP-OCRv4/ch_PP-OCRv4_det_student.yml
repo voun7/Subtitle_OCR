@@ -1,6 +1,6 @@
 Hyperparameters:
-  num_epochs: 10
-  batch_size: 12
+  num_epochs: 20
+  batch_size: 16
   val_batch_size: 1
   patience: 2
   num_workers: 4

@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class SubtitleOCR:
-    supported_languages = ["en", ]
+    supported_langs = ["en", "ch"]
 
     det_configs = {
         "en": {
@@ -29,10 +29,14 @@ class SubtitleOCR:
                             'unclip_ratio': 1.5}
         },
         "ch": {
-            "file_name": "",
-            "Architecture": {},
+            "file_name": "ch_PP-OCRv4_det_student",
+            "Architecture": {'model_type': 'det', 'algorithm': 'DB', 'Transform': None,
+                             'Backbone': {'name': 'PPLCNetV3', 'scale': 0.75, 'det': True},
+                             'Neck': {'name': 'RSEFPN', 'out_channels': 96, 'shortcut': True},
+                             'Head': {'name': 'DBHead', 'k': 50}},
             "resize": {"height": 640, "width": 640, "m32": True},
-            "PostProcess": {}
+            "PostProcess": {'name': 'DBPostProcess', 'thresh': 0.3, 'box_thresh': 0.6, 'max_candidates': 1000,
+                            'unclip_ratio': 1.5}
         }
     }
 
@@ -48,10 +52,14 @@ class SubtitleOCR:
             "PostProcess": {'name': 'CTCLabelDecode'}
         },
         "ch": {
-            "file_name": "",
-            "Architecture": {},
+            "file_name": "ch_PP-OCRv4_rec",
+            "Architecture": {'model_type': 'rec', 'algorithm': 'SVTR_LCNet', 'Transform': None,
+                             'Backbone': {'name': 'PPLCNetV3', 'scale': 0.95},
+                             'Neck': {'name': 'SequenceEncoder', 'encoder_type': 'svtr', 'dims': 120, 'depth': 2,
+                                      'hidden_dims': 120, 'kernel_size': [1, 3], 'use_guide': True},
+                             'Head': {'name': 'CTCHead'}},
             "resize": {"height": 48, "width": 320},
-            "PostProcess": {}
+            "PostProcess": {'name': 'CTCLabelDecode'}
         }
     }
 
@@ -62,7 +70,7 @@ class SubtitleOCR:
         :param model_dir: Directory for model files.
         :param device: Device to load model. GPU will only be used if it's requested and available.
         """
-        assert lang in self.supported_languages, "Requested language not available!"
+        assert lang in self.supported_langs, "Requested language not available!"
         self.models_dir, self.device = Path(model_dir), device if torch.cuda.is_available() else "cpu"
         self.det_model, self.det_post_process, self.det_resize_params = self.init_model(lang)
         self.rec_model, self.rec_post_process, self.rec_resize_params = self.init_model(lang, "rec")
@@ -73,7 +81,7 @@ class SubtitleOCR:
         """
         assert self.models_dir.exists(), "Model save location not found!"
         config = self.det_configs[lang] if model_type == "det" else self.rec_configs[lang]
-        model_file = next(self.models_dir.glob(f"{config["file_name"]} *.pt"))
+        model_file = next(self.models_dir.glob(f"{config["file_name"]} *.pt"))  # best loss will be used
         config.update({"lang": lang})
         model, post_processor = build_model(config), build_post_process(config)
 
@@ -155,7 +163,6 @@ class SubtitleOCR:
                     label["text"], label["score"] = recognizer(cropped_image)[0]
                 else:
                     label["text"], label["score"] = "", 0
-
         else:
             labels = [{"text": text, "score": score} for text, score in recognizer(image)]
         return labels
@@ -171,7 +178,7 @@ class SubtitleOCR:
 def test_ocr() -> None:
     username = os.getlogin()
     test_image_files = Path(rf"C:\Users\{username}\OneDrive\Public\test images")
-    test_sub_ocr = SubtitleOCR(model_dir=rf"C:\Users\{username}\OneDrive\Backups\Subtitle OCR Models")
+    test_sub_ocr = SubtitleOCR("ch", rf"C:\Users\{username}\OneDrive\Backups\Subtitle OCR Models")
     for test_image in test_image_files.iterdir():
         test_outputs = test_sub_ocr.ocr(str(test_image))
         logger.info(test_image)

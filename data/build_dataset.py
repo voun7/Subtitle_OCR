@@ -109,7 +109,7 @@ class TextRecognitionDataset(Dataset):
     @staticmethod
     def augmentations() -> iaa.meta.Sequential:
         augment_seq = iaa.Sequential([
-            iaa.Affine(scale=(0.8, 1.0), rotate=(-3, 3)),
+            iaa.Affine(scale=(0.8, 1.0)),
             iaa.GaussianBlur((0.0, 1.0)),
             iaa.Sometimes(0.5, iaa.Sharpen(alpha=(0.0, 1.0)), iaa.SaltAndPepper(0.1, per_channel=True))
         ], random_order=True)
