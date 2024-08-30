@@ -251,12 +251,18 @@ class ModelTrainer:
         }
         torch.save(checkpoint, self.checkpoint_dir / f"{self.model_filename} (checkpoint) ({self.best_val_loss}).pt")
 
-    def load_checkpoint(self, model_checkpoint_file: str, new_learning_rate: float = None) -> None:
-        if not model_checkpoint_file or not Path(model_checkpoint_file).exists():
+    def load_checkpoint(self, checkpoint_file: str, new_learning_rate: float = None) -> None:
+        """
+        Load model state, optimizer state and other values from checkpoint file to resuming training model.
+        :param checkpoint_file: Name or location of checkpoint file.
+        :param new_learning_rate: New learning rate to override checkpoints previous learning rate.
+        """
+        if not (checkpoint_file.endswith(".pt") and Path(self.checkpoint_dir, checkpoint_file).exists()):
             logger.warning("Checkpoint File Not Loaded or Does Not Exist.")
             return
-        logger.info(f"Checkpoint File Loaded! File: {model_checkpoint_file}")
-        checkpoint = torch.load(model_checkpoint_file)  # Load checkpoint dict
+        checkpoint_file = self.checkpoint_dir / checkpoint_file
+        logger.info(f"Checkpoint File Loaded! File: {checkpoint_file}")
+        checkpoint = torch.load(checkpoint_file)  # Load checkpoint dict
         # Restore state for model and optimizer
         self.model.load_state_dict(checkpoint["model_state_dict"])
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
@@ -276,12 +282,12 @@ class ModelTrainer:
         logger.debug(f"Checkpoint Values:\n{self.losses=}\n{self.val_losses=}\n{self.metrics=}\n{self.val_metrics=}\n"
                      f"{self.learning_rates=}")
 
-    def save_model(self, last_val_loss: float) -> None:
+    def save_model(self, last_val_loss: float = None) -> None:
         """
         Save the model state and checkpoint from the last epoch.
         :param last_val_loss: Value of validation loss in the last epoch.
         """
-        model_name = self.model_dir / f"{self.model_filename} ({last_val_loss}).pt"
+        model_name = self.model_dir / f"{self.model_filename} ({last_val_loss or self.best_val_loss}).pt"
         torch.save(self.model.state_dict(), model_name)
         logger.info(f"Model Saved! Name: {model_name}")
 
