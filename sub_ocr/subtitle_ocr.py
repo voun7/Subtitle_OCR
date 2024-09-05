@@ -26,7 +26,7 @@ class SubtitleOCR:
                              'Head': {'name': 'DBHead', 'k': 50}},
             "resize": {"height": 960, "width": 960, "m32": True},
             "PostProcess": {'name': 'DBPostProcess', 'thresh': 0.3, 'box_thresh': 0.6, 'max_candidates': 1000,
-                            'unclip_ratio': 1.5}
+                            'unclip_ratio': 2.5}
         },
         "ch": {
             "file_name": "ch_PP-OCRv4_det_student",
@@ -36,7 +36,7 @@ class SubtitleOCR:
                              'Head': {'name': 'DBHead', 'k': 50}},
             "resize": {"height": 640, "width": 640, "m32": True},
             "PostProcess": {'name': 'DBPostProcess', 'thresh': 0.3, 'box_thresh': 0.6, 'max_candidates': 1000,
-                            'unclip_ratio': 1.5}
+                            'unclip_ratio': 2.5}
         }
     }
 

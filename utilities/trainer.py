@@ -251,11 +251,13 @@ class ModelTrainer:
         }
         torch.save(checkpoint, self.checkpoint_dir / f"{self.model_filename} (checkpoint) ({self.best_val_loss}).pt")
 
-    def load_checkpoint(self, checkpoint_file: str, new_learning_rate: float = None) -> None:
+    def load_checkpoint(self, checkpoint_file: str, new_learning_rate: float = None,
+                        set_best_val_loss: bool = True) -> None:
         """
         Load model state, optimizer state and other values from checkpoint file to resuming training model.
         :param checkpoint_file: Name or location of checkpoint file.
         :param new_learning_rate: New learning rate to override checkpoints previous learning rate.
+        :param set_best_val_loss: If True the best val loss from the checkpoint file will be used.
         """
         if not (checkpoint_file.endswith(".pt") and Path(self.checkpoint_dir, checkpoint_file).exists()):
             logger.warning("Checkpoint File Not Loaded or Does Not Exist.")
@@ -268,10 +270,10 @@ class ModelTrainer:
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         if new_learning_rate:
             self.set_lr(new_learning_rate)
-
         self.total_epochs, self.learning_rates = checkpoint["total_epochs"], checkpoint["learning_rates"]
         self.losses, self.val_losses = checkpoint["losses"], checkpoint["val_losses"]
-        self.best_val_loss = checkpoint["best_val_loss"]
+        if set_best_val_loss:
+            self.best_val_loss = checkpoint["best_val_loss"]
         self.metrics, self.val_metrics = checkpoint["metrics"], checkpoint["val_metrics"]
         self.num_epochs += self.total_epochs  # update the overall number of epochs
         logger.info(f"Model Checkpoint Loaded: Model Params No: {len(list(self.model.named_parameters()))},\n"
