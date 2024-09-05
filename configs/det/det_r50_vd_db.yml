@@ -1,5 +1,5 @@
 Hyperparameters:
-  num_epochs: 10
+  num_epochs: 50
   batch_size: 12
   val_batch_size: 1
   patience: 2
