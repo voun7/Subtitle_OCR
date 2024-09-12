@@ -141,15 +141,20 @@ class ModelTrainer:
         return loss, metric
 
     def set_seed(self, seed: int) -> None:
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
-        torch.manual_seed(seed)
-        np.random.seed(seed)
-        random.seed(seed)
-        try:
-            self.train_loader.sampler.generator.manual_seed(seed)
-        except AttributeError:
-            pass
+        """
+        Set seed to remove randomness and enable reproducibility.
+        """
+        if seed:
+            logger.debug(f"Seed set to: {seed}")
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            torch.manual_seed(seed)
+            np.random.seed(seed)
+            random.seed(seed)
+            try:
+                self.train_loader.sampler.generator.manual_seed(seed)
+            except AttributeError:
+                pass
 
     def get_lr(self) -> float:
         """
@@ -180,7 +185,7 @@ class ModelTrainer:
         """
         return timedelta(seconds=round(perf_counter() - start_time))
 
-    def train(self, seed: int = 42) -> None:
+    def train(self, seed: int = None) -> None:
         assert self.train_loader and self.val_loader, "Train or Val data loader has not been set!"
         self.set_seed(seed)  # To ensure reproducibility of the training process
         start_time, self.writer = perf_counter(), SummaryWriter()
