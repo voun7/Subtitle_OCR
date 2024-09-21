@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="subtitle_ocr",
-    version="1.0",
+    version="1.1",
     packages=[
         'sub_ocr', 'sub_ocr.modeling', 'sub_ocr.modeling.heads', 'sub_ocr.modeling.necks', 'sub_ocr.modeling.backbones',
         'sub_ocr.modeling.transforms', 'sub_ocr.modeling.architectures', 'sub_ocr.postprocess', "sub_ocr.alphabets"

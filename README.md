@@ -36,7 +36,7 @@ python -m build
 ### Install using pip:
 
 ```
-pip install git+https://github.com/voun-github/Subtitle_OCR.git
+pip install git+https://github.com/voun7/Subtitle_OCR.git
 ```
 
 [OCR Models](https://1drv.ms/f/s!AjcgvUnda0Imi_UAUiJ__YWl6D8lZA) - Place downloaded models in `saved models` folder
