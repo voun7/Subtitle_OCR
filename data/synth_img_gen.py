@@ -5,6 +5,7 @@ def generate_trdg_images() -> None:
     """
     Use trdg package to generate synthetic images with text for training model.
     Cleanup module should be used for deleting all images that have blended with the background.
+    python.exe -m pip install pip==24.0
     pip install git+https://github.com/Belval/TextRecognitionDataGenerator.git (pip<24.1 required)
 
     Errors and Fixes (paste them directly in the package module)

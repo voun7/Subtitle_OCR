@@ -53,7 +53,7 @@ class ModelTrainer:
             collate_fn=getattr(dataset, "collate_fn", None),
             pin_memory=self.use_cuda if self.use_cuda and batch_size > 2 else False
         )
-        logger.debug(f"Dataloader initialized: {vars(data_loader)}")
+        logger.debug(f"DataLoader initialized: {vars(data_loader)}")
         return data_loader
 
     def set_loaders(self, train_ds, val_ds, batch_size: int, val_batch_size: int, num_workers: int) -> None:
@@ -269,7 +269,7 @@ class ModelTrainer:
             return
         checkpoint_file = self.checkpoint_dir / checkpoint_file
         logger.info(f"Checkpoint File Loaded! File: {checkpoint_file}")
-        checkpoint = torch.load(checkpoint_file)  # Load checkpoint dict
+        checkpoint = torch.load(checkpoint_file, weights_only=False)  # Load checkpoint dict
         # Restore state for model and optimizer
         self.model.load_state_dict(checkpoint["model_state_dict"])
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])

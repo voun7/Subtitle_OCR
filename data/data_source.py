@@ -86,12 +86,12 @@ class ICDAR2015Data:
 
 
 class ICDAR2017RCTWData:
-    def __init__(self, data_type: str, model_type: str = None) -> None:
+    def __init__(self, data_type: str) -> None:
         """
-        ICDAR 2017 RCTW Dataset (det & rec) (ch) (Line)
+        ICDAR 2017 RCTW Dataset (det) (ch) (Line)
         source: https://rctw.vlrlab.net/dataset
         """
-        self.data_type, self.model_type, self.dataset_dir = data_type, model_type, DATASET_DIR / "ICDAR 2017 RCTW"
+        self.data_type, self.dataset_dir = data_type, DATASET_DIR / "ICDAR 2017 RCTW"
         self.image_dir, self.labels_dir = self.dataset_dir / "train_images", self.dataset_dir / "train_gts"
         self.ignore_tags = ["###"]
 
@@ -103,35 +103,26 @@ class ICDAR2017RCTWData:
         else:
             image_files, image_labels = val_data
         image_data = []
-        if self.model_type == "rec":
-            for image_path, label_path in zip(image_files, image_labels):
-                for label in label_path.read_text("utf-8-sig").splitlines():
-                    label = label.split(',', maxsplit=9)
-                    bbox, text = pairwise_tuples(map(float, label[:8])), label[9:][0].strip('\"')
-                    if text in self.ignore_tags:
-                        continue
-                    image_data.append((image_path, [{"bbox": bbox, "text": text}]))
-        else:
-            for image_path, label_path in zip(image_files, image_labels):
-                image_bb_txt, labels = [], label_path.read_text("utf-8-sig").splitlines()
-                for label in labels:
-                    label = label.split(',', maxsplit=9)
-                    bbox, text = pairwise_tuples(map(float, label[:8])), label[9:][0].strip('\"')
-                    if text in self.ignore_tags:
-                        continue
-                    image_bb_txt.append({"bbox": bbox, "text": text})
-                if image_bb_txt:
-                    image_data.append((image_path, image_bb_txt))
+        for image_path, label_path in zip(image_files, image_labels):
+            image_bb_txt, labels = [], label_path.read_text("utf-8-sig").splitlines()
+            for label in labels:
+                label = label.split(',', maxsplit=9)
+                bbox, text = pairwise_tuples(map(float, label[:8])), label[9:][0].strip('\"')
+                if text in self.ignore_tags:
+                    continue
+                image_bb_txt.append({"bbox": bbox, "text": text})
+            if image_bb_txt:
+                image_data.append((image_path, image_bb_txt))
         return image_data
 
 
 class ICDAR2019LSVTFullData:
-    def __init__(self, data_type: str, model_type: str = None) -> None:
+    def __init__(self, data_type: str) -> None:
         """
-        ICDAR 2019 LSVT Dataset (det & rec) (en & ch) (Line)
+        ICDAR 2019 LSVT Dataset (det) (en & ch) (Line)
         source: https://rrc.cvc.uab.es/?ch=16
         """
-        self.data_type, self.model_type, self.dataset_dir = data_type, model_type, DATASET_DIR / "ICDAR 2019 LSVT"
+        self.data_type, self.dataset_dir = data_type, DATASET_DIR / "ICDAR 2019 LSVT"
         self.image_dir, self.labels_file = self.dataset_dir / "train_full", self.dataset_dir / "train_full_labels.json"
         self.ignore_tags = ["###"]
 
@@ -139,50 +130,15 @@ class ICDAR2019LSVTFullData:
         with open(self.labels_file) as file:
             labels = json.load(file)
         image_data = []
-        if self.model_type == "rec":
-            for image_path in image_files:
-                for label in labels[image_path.stem]:
-                    bbox, text = label["points"], label["transcription"]
-                    if text in self.ignore_tags:
-                        continue
-                    image_data.append((image_path, [{"bbox": bbox, "text": text}]))
-        else:
-            for image_path in image_files:
-                image_bb_txt = []
-                for label in labels[image_path.stem]:
-                    bbox, text = label["points"], label["transcription"]
-                    if text in self.ignore_tags:
-                        continue
-                    image_bb_txt.append({"bbox": bbox, "text": text})
-                if image_bb_txt:
-                    image_data.append((image_path, image_bb_txt))
-        return image_data
-
-    def load_data(self) -> list:
-        image_files = list(self.image_dir.glob("*/*"))
-        train_data, val_data = data_random_split(image_files)
-        if self.data_type == "train":
-            return self.load_image_labels(train_data)
-        else:
-            return self.load_image_labels(val_data)
-
-
-class ICDAR2019LSVTWeakData:
-    def __init__(self, data_type: str) -> None:
-        """
-        ICDAR 2019 LSVT Dataset (rec) (ch) (Line)
-        source: https://rrc.cvc.uab.es/?ch=16
-        """
-        self.data_type, self.dataset_dir = data_type, DATASET_DIR / "ICDAR 2019 LSVT"
-        self.image_dir, self.labels_file = self.dataset_dir / "train_weak", self.dataset_dir / "train_weak_labels.json"
-
-    def load_image_labels(self, image_files: list) -> list:
-        with open(self.labels_file, 'r') as file:
-            labels = json.load(file)
-        image_data = []
         for image_path in image_files:
-            text = labels[image_path.stem][0]["transcription"]
-            image_data.append((image_path, [{"bbox": None, "text": text}]))
+            image_bb_txt = []
+            for label in labels[image_path.stem]:
+                bbox, text = label["points"], label["transcription"]
+                if text in self.ignore_tags:
+                    continue
+                image_bb_txt.append({"bbox": bbox, "text": text})
+            if image_bb_txt:
+                image_data.append((image_path, image_bb_txt))
         return image_data
 
     def load_data(self) -> list:
@@ -217,12 +173,12 @@ class MSRATD500Data:
 
 class ICDAR2019ReCTSData:
 
-    def __init__(self, data_type: str, model_type: str = None) -> None:
+    def __init__(self, data_type: str) -> None:
         """
-        ICDAR 2019 ReCTS Dataset (det & rec) (en & ch) (Word)
+        ICDAR 2019 ReCTS Dataset (det) (en & ch) (Word)
         source: https://rrc.cvc.uab.es/?ch=12
         """
-        self.data_type, self.model_type, self.dataset_dir = data_type, model_type, DATASET_DIR / "ICDAR 2019 ReCTS"
+        self.data_type, self.dataset_dir = data_type, DATASET_DIR / "ICDAR 2019 ReCTS"
         self.image_dir, self.labels_dir = self.dataset_dir / "train/images", self.dataset_dir / "train/gt"
         self.ignore_tags = ["###"]
 
@@ -234,34 +190,25 @@ class ICDAR2019ReCTSData:
         else:
             image_files, image_labels = val_data
         image_data = []
-        if self.model_type == "rec":
-            for image_path, label_path in zip(image_files, image_labels):
-                labels = json.loads(label_path.read_text("utf-8"))
-                for label in labels["lines"]:
-                    bbox, text = pairwise_tuples(label["points"]), label["transcription"]
-                    if text in self.ignore_tags:
-                        continue
-                    image_data.append((image_path, [{"bbox": bbox, "text": text}]))
-        else:
-            for image_path, label_path in zip(image_files, image_labels):
-                image_bb_txt, labels = [], json.loads(label_path.read_text("utf-8"))
-                for label in labels["lines"]:
-                    bbox, text = pairwise_tuples(label["points"]), label["transcription"]
-                    if text in self.ignore_tags:
-                        continue
-                    image_bb_txt.append({"bbox": bbox, "text": text})
-                if image_bb_txt:
-                    image_data.append((image_path, image_bb_txt))
+        for image_path, label_path in zip(image_files, image_labels):
+            image_bb_txt, labels = [], json.loads(label_path.read_text("utf-8"))
+            for label in labels["lines"]:
+                bbox, text = pairwise_tuples(label["points"]), label["transcription"]
+                if text in self.ignore_tags:
+                    continue
+                image_bb_txt.append({"bbox": bbox, "text": text})
+            if image_bb_txt:
+                image_data.append((image_path, image_bb_txt))
         return image_data
 
 
 class SynthTextData:
-    def __init__(self, data_type: str, model_type: str = None) -> None:
+    def __init__(self, data_type: str) -> None:
         """
-        SynthText Dataset (det & rec) (en) (Word & Line)
+        SynthText Dataset (det) (en) (Word & Line)
         source: https://github.com/ankush-me/SynthText
         """
-        self.data_type, self.model_type, self.dataset_dir = data_type, model_type, DATASET_DIR / "SynthText"
+        self.data_type, self.dataset_dir = data_type, DATASET_DIR / "SynthText"
         self.image_dir = self.dataset_dir / "images"
         self.labels_file, self.labels_json_file = self.dataset_dir / "gt.mat", self.dataset_dir / "gt.json"
 
@@ -292,13 +239,7 @@ class SynthTextData:
         with open(self.labels_json_file) as file:
             labels = json.load(file)
 
-        image_data = []
-        if self.model_type == "rec":
-            for image_path in image_files:
-                for label in labels[image_path.name]:
-                    image_data.append((image_path, [label]))
-        else:
-            image_data = [(image_path, labels[image_path.name]) for image_path in image_files]
+        image_data = [(image_path, labels[image_path.name]) for image_path in image_files]
         return image_data
 
     def load_data(self) -> list:
@@ -311,12 +252,12 @@ class SynthTextData:
 
 
 class TextOCR01Data:
-    def __init__(self, data_type: str, model_type: str = None) -> None:
+    def __init__(self, data_type: str) -> None:
         """
-        TextOCR v0.1 Dataset (det & rec) (en) (Word)
+        TextOCR v0.1 Dataset (det) (en) (Word)
         source: https://textvqa.org/textocr/dataset/
         """
-        self.model_type, self.dataset_dir = model_type, DATASET_DIR / "TextOCR V0.1"
+        self.dataset_dir = DATASET_DIR / "TextOCR V0.1"
         self.image_dir = self.dataset_dir / "train_val_images"
         self.labels_file = self.dataset_dir / f"TextOCR_0.1_{data_type}.json"
 
@@ -336,13 +277,7 @@ class TextOCR01Data:
     def load_data(self) -> list:
         image_labels = self.load_labels()
         image_files = {file.stem: file for file in self.image_dir.iterdir()}
-        image_data = []
-        if self.model_type == "rec":
-            for key, values in image_labels.items():
-                for value in values:
-                    image_data.append((image_files[key], [value]))
-        else:
-            image_data = [(image_files[key], value) for key, value in image_labels.items()]
+        image_data = [(image_files[key], value) for key, value in image_labels.items()]
         return image_data
 
 
@@ -372,19 +307,18 @@ class TRDGSyntheticData:
             return self.load_image_labels(val_data)
 
 
-def data_random_split(files, labels=None, split: float = 0.8, shuffle: bool = False) -> tuple[np.array, np.array]:
+def data_random_split(files, labels=None, split: float = 0.8, seed: int = 31) -> tuple[np.array, np.array]:
     """
     Randomly split any given files into two sets of non-overlapping training and validation files.
     :param files: Index able object with length.
     :param labels: Labels for the files. Files and labels should have the same sort if provided.
     :param split: Represents the ratio proportion of the dataset split for training and validation.
-    :param shuffle: Value used to set randomness of split. For reproducibility purposes.
+    :param seed: Number used to set randomness.
     """
     files = np.array(files)
     files_size = len(files)
     train_size = int(split * files_size)
 
-    seed = None if shuffle else 31
     rng = np.random.default_rng(seed)
     random_indexes = rng.permutation(files_size)
 
@@ -418,8 +352,6 @@ def load_data(lang: str, model_type: str, data_type: str) -> list:
         elif model_type == "rec":
             return merge_data_sources(
                 ICDAR2015Data(data_type, model_type),
-                # SynthTextData(data_type, model_type),
-                TextOCR01Data(data_type, model_type),
                 TRDGSyntheticData(lang, data_type)
             )
     elif lang == "ch":
@@ -433,10 +365,6 @@ def load_data(lang: str, model_type: str, data_type: str) -> list:
         elif model_type == "rec":
             return merge_data_sources(
                 ChStreetViewTxtRecData(data_type),
-                ICDAR2017RCTWData(data_type, model_type),
-                ICDAR2019LSVTFullData(data_type, model_type),
-                ICDAR2019LSVTWeakData(data_type),
-                ICDAR2019ReCTSData(data_type, model_type),
                 TRDGSyntheticData(lang, data_type)
             )
     elif lang == "test":  # for testing only
@@ -449,7 +377,7 @@ def load_data(lang: str, model_type: str, data_type: str) -> list:
 if __name__ == '__main__':
     start = perf_counter()
 
-    ts_data = load_data("en", "rec", "train")
+    ts_data = load_data("ch", "rec", "train")
     ts_len = len(ts_data)
     print(f"Data Source Length: {ts_len:,} Data Load Time: {perf_counter() - start:.4f}\n")
     for ts_idx in range(0, ts_len, round(ts_len / 200)):

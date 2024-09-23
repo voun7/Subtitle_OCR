@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class SubtitleOCR:
-    supported_langs = ["en", "ch"]
+    supported_languages = ["en", "ch"]
 
     default_configs = {
         "det_en": "en_det_ppocr_v3",
@@ -105,7 +105,7 @@ class SubtitleOCR:
         :param model_dir: Directory for model files.
         :param device: Device to load model. GPU will only be used if it's requested and available.
         """
-        assert lang in self.supported_langs, "Requested language is not available!"
+        assert lang in self.supported_languages, "Requested language is not available!"
         assert device in ["cpu", "cuda"], "Requested device is not available!"
         self.models_dir, self.device = Path(model_dir), device if torch.cuda.is_available() else "cpu"
         self.det_model, self.det_post_process, self.det_params = self.init_model(lang, "det")
@@ -126,7 +126,7 @@ class SubtitleOCR:
         model, post_processor = build_model(config), build_post_process(config)
 
         logger.debug(f"Device: {self.device}, Model Config: {config},\nModel File: {model_file}")
-        model.load_state_dict(torch.load(model_file, self.device, weights_only=False))
+        model.load_state_dict(torch.load(model_file, self.device, weights_only=True))
         model.to(self.device).eval()
         return model, post_processor, config["params"]
 
@@ -150,11 +150,11 @@ class SubtitleOCR:
         return normalize_img(resized_image)
 
     @staticmethod
-    def merge_bboxes(bboxes_: np.ndarray) -> tuple:
-        n_x1, n_y1 = np.min(bboxes_[:, 0], axis=0)
-        n_x2, n_y2 = np.max(bboxes_[:, 1], axis=0)
-        n_x3, n_y3 = np.max(bboxes_[:, 2], axis=0)
-        n_x4, n_y4 = np.min(bboxes_[:, 3], axis=0)
+    def merge_bboxes(bboxes: np.ndarray) -> tuple:
+        n_x1, n_y1 = np.min(bboxes[:, 0], axis=0)
+        n_x2, n_y2 = np.max(bboxes[:, 1], axis=0)
+        n_x3, n_y3 = np.max(bboxes[:, 2], axis=0)
+        n_x4, n_y4 = np.min(bboxes[:, 3], axis=0)
         return (n_x1, n_y1), (n_x2, n_y2), (n_x3, n_y3), (n_x4, n_y4)
 
     def sort_merge_bboxes(self, bboxes: np.ndarray, threshold: int = 10) -> list:
