@@ -126,7 +126,7 @@ class SubtitleOCR:
         model, post_processor = build_model(config), build_post_process(config)
 
         logger.debug(f"Device: {self.device}, Model Config: {config},\nModel File: {model_file}")
-        model.load_state_dict(torch.load(model_file, map_location=self.device))
+        model.load_state_dict(torch.load(model_file, self.device, weights_only=False))
         model.to(self.device).eval()
         return model, post_processor, config["params"]
 
@@ -201,10 +201,10 @@ class SubtitleOCR:
             for label in labels:
                 x_min, y_min, x_max, y_max = pascal_voc_bb(label["bbox"])
                 cropped_image = image[y_min:y_max, x_min:x_max]  # crop image with bbox
-                if cropped_image.size:  # for invalid crops
+                if cropped_image.size:
                     label["text"], label["score"] = recognizer(cropped_image)[0]
                 else:
-                    label["text"], label["score"] = "", 0
+                    label["text"], label["score"] = "", 0  # for invalid crops
         else:
             labels = [{"text": text, "score": score} for text, score in recognizer(image)]
         return labels
