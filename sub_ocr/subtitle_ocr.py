@@ -150,20 +150,19 @@ class SubtitleOCR:
         return normalize_img(resized_image)
 
     @staticmethod
-    def sort_merge_bboxes(bboxes: np.ndarray, threshold: int = 10) -> list:
+    def merge_bboxes(bboxes_: np.ndarray) -> tuple:
+        n_x1, n_y1 = np.min(bboxes_[:, 0], axis=0)
+        n_x2, n_y2 = np.max(bboxes_[:, 1], axis=0)
+        n_x3, n_y3 = np.max(bboxes_[:, 2], axis=0)
+        n_x4, n_y4 = np.min(bboxes_[:, 3], axis=0)
+        return (n_x1, n_y1), (n_x2, n_y2), (n_x3, n_y3), (n_x4, n_y4)
+
+    def sort_merge_bboxes(self, bboxes: np.ndarray, threshold: int = 10) -> list:
         """
         Sort and merge bboxes that are very close and on the same horizontal line to create larger bboxes.
         The y-coordinates is used because bounding boxes that are aligned horizontally will have similar y-coordinates.
         e.g, Single word bboxes that are close to each other would merge together to form a bbox containing a sentence.
         """
-
-        def merge(bboxes_: np.ndarray) -> tuple:
-            n_x1, n_y1 = np.min(bboxes_[:, 0], axis=0)
-            n_x2, n_y2 = np.max(bboxes_[:, 1], axis=0)
-            n_x3, n_y3 = np.max(bboxes_[:, 2], axis=0)
-            n_x4, n_y4 = np.min(bboxes_[:, 3], axis=0)
-            return (n_x1, n_y1), (n_x2, n_y2), (n_x3, n_y3), (n_x4, n_y4)
-
         # Calculate the average y-coordinate for each bbox
         avg_y = np.mean(bboxes[:, :, 1], axis=1)
         # Sort the bounding boxes by their average y-coordinate
@@ -175,7 +174,7 @@ class SubtitleOCR:
         group_labels = np.cumsum(diff_y > threshold)
         # Use advanced indexing to group bounding boxes
         groups = [sorted_bboxes[group_labels == i] for i in np.unique(group_labels)]
-        return [{"bbox": merge(bbs)} for bbs in groups]
+        return [{"bbox": self.merge_bboxes(bbs)} for bbs in groups]
 
     def text_detector(self, image: np.ndarray, image_height: int, image_width: int) -> list:
         image = self.det_image_resize(image)
@@ -190,23 +189,23 @@ class SubtitleOCR:
             labels = [{"bbox": bb.tolist()} for bb in bboxes]
         return labels
 
-    def text_recognizer(self, image: np.ndarray, labels: list) -> list:
-        def recognizer(img: np.ndarray) -> tuple:
-            img = self.rec_image_resize(img)
-            img = torch.from_numpy(img).to(self.device)
-            prediction = self.rec_model(img.unsqueeze(0))
-            return self.rec_post_process(prediction)
+    def recognizer(self, image: np.ndarray) -> tuple:
+        image = self.rec_image_resize(image)
+        image = torch.from_numpy(image).to(self.device)
+        prediction = self.rec_model(image.unsqueeze(0))
+        return self.rec_post_process(prediction)
 
-        if labels:
+    def text_recognizer(self, image: np.ndarray, labels: list) -> list:
+        if labels:  # for labels with bbox
             for label in labels:
                 x_min, y_min, x_max, y_max = pascal_voc_bb(label["bbox"])
                 cropped_image = image[y_min:y_max, x_min:x_max]  # crop image with bbox
                 if cropped_image.size:
-                    label["text"], label["score"] = recognizer(cropped_image)[0]
+                    label["text"], label["score"] = self.recognizer(cropped_image)[0]
                 else:
                     label["text"], label["score"] = "", 0  # for invalid crops
         else:
-            labels = [{"text": text, "score": score} for text, score in recognizer(image)]
+            labels = [{"text": text, "score": score} for text, score in self.recognizer(image)]
         return labels
 
     @torch.no_grad()

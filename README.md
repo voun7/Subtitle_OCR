@@ -44,7 +44,7 @@ pip install git+https://github.com/voun7/Subtitle_OCR.git
 ``` python
 from sub_ocr import SubtitleOCR
 
-reader = SubtitleOCR()  # this needs to run only once to load the models into memory
+reader = SubtitleOCR("en")  # this needs to run only once to load the models into memory
 result = reader.ocr("image_1.jpg")
 ```
 
