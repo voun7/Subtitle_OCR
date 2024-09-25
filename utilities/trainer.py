@@ -298,6 +298,16 @@ class ModelTrainer:
         torch.save(self.model.state_dict(), model_name)
         logger.info(f"Model Saved! Name: {model_name}")
 
+    def create_model_checkpoint(self, model_file: str) -> None:
+        """
+        Use an already saved model to create a checkpoint file that can be used for fine-tuning.
+        :param model_file: Path to model file.
+        """
+        assert Path(model_file).exists(), "File does not exist!"
+        self.model.load_state_dict(torch.load(model_file, self.device, weights_only=True))
+        self.save_checkpoint()
+        logger.info("Model Checkpoint created!")
+
 
 def plot_checkpoint(model_checkpoint_file: str) -> None:
     """
