@@ -57,7 +57,10 @@ class BaseModel(nn.Module):
                 char_num = len(read_chars(lang))
                 if "CTC" in config['Head']['name']:
                     char_num += 1
-                config['Head']['out_channels'] = char_num
+                if config['Head'].get('head_list'):
+                    config['Head']['out_channels_list'] = {'CTCLabelDecode': char_num + 1}
+                else:
+                    config['Head']['out_channels'] = char_num
             self.head = build_head(config["Head"])
 
         self._initialize_weights()

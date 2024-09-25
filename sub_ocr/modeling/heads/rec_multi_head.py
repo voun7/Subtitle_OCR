@@ -4,26 +4,10 @@ from .rec_ctc_head import CTCHead
 from ..necks.rnn import Im2Seq, SequenceEncoder
 
 
-class FCTranspose(nn.Module):
-    def __init__(self, in_channels, out_channels, only_transpose=False):
-        super().__init__()
-        self.only_transpose = only_transpose
-        if not self.only_transpose:
-            self.fc = nn.Linear(in_channels, out_channels, bias=False)
-
-    def forward(self, x):
-        if self.only_transpose:
-            return x.permute([0, 2, 1])
-        else:
-            return self.fc(x.permute([0, 2, 1]))
-
-
 class MultiHead(nn.Module):
     def __init__(self, in_channels, out_channels_list, **kwargs):
         super().__init__()
         self.head_list = kwargs.pop('head_list')
-
-        self.gtc_head = 'sar'
         assert len(self.head_list) >= 2
         for idx, head_name in enumerate(self.head_list):
             name = list(head_name)[0]
@@ -43,20 +27,7 @@ class MultiHead(nn.Module):
             else:
                 raise NotImplementedError('{} is not supported in MultiHead yet'.format(name))
 
-    def forward(self, x, data=None):
+    def forward(self, x):
         ctc_encoder = self.ctc_encoder(x)
         ctc_out = self.ctc_head(ctc_encoder)
-        head_out = dict()
-        head_out['ctc'] = ctc_out
-        head_out['res'] = ctc_out
-        head_out['ctc_neck'] = ctc_encoder
-        # eval mode
-        if not self.training:
-            return ctc_out
-        if self.gtc_head == 'sar':
-            sar_out = self.sar_head(x, data[1:])['res']
-            head_out['sar'] = sar_out
-        else:
-            gtc_out = self.gtc_head(self.before_gtc(x), data[1:])['res']
-            head_out['nrtr'] = gtc_out
-        return head_out
+        return ctc_out

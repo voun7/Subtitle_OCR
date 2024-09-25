@@ -20,7 +20,7 @@ class SubtitleOCR:
         "det_en": "en_det_ppocr_v3",
         "det_ch": "ch_ptocr_v4_det_infer.pth",
         "rec_en": "en_PP-OCRv4_rec",
-        "rec_ch": "ch_PP-OCRv4_rec",
+        "rec_ch": "ch_ptocr_v4_rec_infer.pth",
     }
 
     configs = {
@@ -89,8 +89,7 @@ class SubtitleOCR:
                                          {'CTCHead': {
                                              'Neck': {'name': 'svtr', 'dims': 120, 'depth': 2, 'hidden_dims': 120,
                                                       'kernel_size': [1, 3], 'use_guide': True}}},
-                                         {'NRTRHead': {'nrtr_dim': 384, 'max_text_length': 25}}],
-                                              'out_channels_list': {'CTCLabelDecode': 6625}}},
+                                         {'NRTRHead': {'nrtr_dim': 384, 'max_text_length': 25}}]}},
                     "params": {"height": 48, "width": 320},
                     "PostProcess": {'name': 'CTCLabelDecode'}
                 },
