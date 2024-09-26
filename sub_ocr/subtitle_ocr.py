@@ -20,7 +20,7 @@ class SubtitleOCR:
         "det_en": "en_det_ppocr_v3",
         "det_ch": "ch_ptocr_v4_det_infer.pth",
         "rec_en": "en_PP-OCRv4_rec",
-        "rec_ch": "ch_ptocr_v4_rec_infer.pth",
+        "rec_ch": "ch_PP-OCRv4_rec",
     }
 
     configs = {

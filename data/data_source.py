@@ -347,12 +347,13 @@ def load_data(lang: str, model_type: str, data_type: str) -> list:
                 ICDAR2015Data(data_type),
                 MSRATD500Data(data_type),
                 SynthTextData(data_type),
-                TextOCR01Data(data_type)
+                TextOCR01Data(data_type),
             )
         elif model_type == "rec":
             return merge_data_sources(
                 ICDAR2015Data(data_type, model_type),
-                TRDGSyntheticData(lang, data_type)
+                TRDGSyntheticData(lang, data_type),
+                TRDGSyntheticData("sb", data_type),  # for symbols and en
             )
     elif lang == "ch":
         if model_type == "det":
@@ -365,7 +366,8 @@ def load_data(lang: str, model_type: str, data_type: str) -> list:
         elif model_type == "rec":
             return merge_data_sources(
                 ChStreetViewTxtRecData(data_type),
-                TRDGSyntheticData(lang, data_type)
+                TRDGSyntheticData(lang, data_type),
+                TRDGSyntheticData("sb", data_type),  # for symbols and en
             )
     elif lang == "test":  # for testing only
         if model_type == "det":
