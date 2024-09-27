@@ -1,7 +1,6 @@
+import albumentations as A
 import cv2 as cv
-import imgaug.augmenters as iaa
 import numpy as np
-from imgaug.augmentables import Keypoint, KeypointsOnImage
 from torch.utils.data import Dataset
 
 from sub_ocr.utils import read_image, rescale, normalize_img, crop_image
@@ -53,28 +52,38 @@ class TextDetectionDataset(Dataset):
             self.collate_fn = Collator(tensor_keys).collate_fn
 
     @staticmethod
-    def augmentations() -> iaa.meta.Sequential:
-        augment_seq = iaa.Sequential([
-            iaa.Fliplr(0.5),
-            iaa.Affine(scale=(0.7, 0.95), rotate=(-10, 10)),
-            iaa.Resize((0.5, 3.0)),
-            iaa.AdditiveGaussianNoise(scale=0.1 * 255),
-            iaa.Sometimes(0.5, iaa.Crop(percent=(0, 0.1)), iaa.SaltAndPepper(0.1, per_channel=True))
-        ], random_order=True)
+    def augmentations() -> A.Compose:
+        augment_seq = A.Compose([
+            A.Affine(scale=(0.75, 1.2), rotate=(-10, 10), p=1),
+            A.RandomBrightnessContrast(p=0.5),  # Random brightness and contrast adjustment
+            A.HueSaturationValue(p=0.5),  # Change hue, saturation, and value of the image
+            A.RandomShadow(p=0.4),
+            A.RGBShift(p=0.5),  # Shift RGB values
+            A.HorizontalFlip(p=0.5),  # Random horizontal flip
+            A.Rotate(limit=15),  # Random rotation in the range (-15, 15)
+            A.GaussNoise(p=0.3),  # Add random noise to the image
+            A.MotionBlur(blur_limit=3, p=0.3),  # Apply motion blur to the image
+        ], keypoint_params=A.KeypointParams(format='xy', remove_invisible=False)  # Keypoint's for the polygons
+        )
         return augment_seq
 
     def data_augmentation(self, image: np.ndarray, image_labels: list) -> tuple:
-        aug = self.transform.to_deterministic()
-        image_shape = image.shape
-        image = aug.augment_image(image)
-        augmented_image_labels = []
+        # Convert each label's polygon into key points
+        key_points = [point for label in image_labels for point in label['bbox']]
+        # Apply augmentations to both the image and key points
+        augmented = self.transform(image=image, keypoints=key_points)
+        # Extract the augmented image and key points
+        augmented_image, augmented_key_points = augmented['image'], augmented['keypoints']
+
+        augmented_image_labels, idx = [], 0
         for label in image_labels:
-            key_points = [Keypoint(x, y) for x, y in label['bbox']]
-            key_points = aug.augment_keypoints([KeypointsOnImage(key_points, shape=image_shape)])[0].keypoints
-            # min and max are used here to fix out of bound or negative key points
-            poly = [(min(max(0, p.x), image.shape[1] - 1), min(max(0, p.y), image.shape[0] - 1)) for p in key_points]
+            num_points = len(label['bbox'])  # Get the number of points in the original polygon
+            poly = augmented_key_points[idx:idx + num_points]  # Extract the augmented key points for this polygon
+            idx += num_points
+            # Clamp points to image boundaries after augmentation
+            poly = [(min(max(0, x), image.shape[1] - 1), min(max(0, y), image.shape[0] - 1)) for x, y in poly]
             augmented_image_labels.append({'bbox': poly})
-        return image, augmented_image_labels
+        return augmented_image, augmented_image_labels
 
     def __len__(self) -> int:
         return len(self.img_data)
@@ -85,8 +94,8 @@ class TextDetectionDataset(Dataset):
         if self.data_type == "train":
             image, image_labels = self.data_augmentation(image, image_labels)
         else:
-            # the bbox coordinates will not be allowed to be out of bounds or negative to prevent errors.
-            image_labels = [{'bbox': [(max(min(x, image_width), 1), max(min(y, image_height), 1)) for x, y in
+            # the x, y coordinates will not be allowed to be out of bounds or negative to prevent errors.
+            image_labels = [{'bbox': [(min(max(0, x), image_width), min(max(0, y), image_height)) for x, y in
                                       label["bbox"]]} for label in image_labels]
         image, scale = resize_norm_img(image, self.image_height, self.image_width)
         image_labels = [{"bbox": rescale(scale, bbox=label["bbox"])} for label in image_labels]
@@ -107,12 +116,20 @@ class TextRecognitionDataset(Dataset):
             self.collate_fn = Collator(tensor_keys).collate_fn
 
     @staticmethod
-    def augmentations() -> iaa.meta.Sequential:
-        augment_seq = iaa.Sequential([
-            iaa.Affine(scale=(0.8, 1.0)),
-            iaa.GaussianBlur((0.0, 1.0)),
-            iaa.Sometimes(0.5, iaa.Sharpen(alpha=(0.0, 1.0)), iaa.SaltAndPepper(0.1, per_channel=True))
-        ], random_order=True)
+    def augmentations() -> A.Compose:
+        augment_seq = A.Compose([
+            # Geometric augmentations
+            A.Rotate(limit=3, border_mode=0, value=(0, 0, 0), p=0.5),  # Small rotations for text slant simulation
+            A.Affine(scale=(0.8, 1), p=0.6),
+            # Image quality changes (blur, noise)
+            A.Blur(blur_limit=5, p=0.4),
+            A.MotionBlur(blur_limit=3, p=0.6),  # Simulate motion blur
+            A.GaussNoise(var_limit=(50.0, 100.0), p=0.3),  # Add Gaussian noise to simulate poor-quality images
+            # Color augmentations
+            A.RandomShadow(p=0.5),
+            A.PixelDropout(p=0.8),
+            A.HueSaturationValue(10, sat_shift_limit=10, val_shift_limit=10, p=0.7),  # Slight color jitter
+        ])
         return augment_seq
 
     def __len__(self) -> int:
@@ -125,7 +142,7 @@ class TextRecognitionDataset(Dataset):
         if bbox := image_labels[0]["bbox"]:
             blank, image = crop_image(image, image_height, image_width, bbox)
         if self.data_type == "train":
-            image = self.transform.augment_image(image)
+            image = self.transform(image=image)["image"]
         image, text = resize_norm_img(image, self.image_height, self.image_width)[0], " " if blank else text
         data = {"image_path": str(image_path), "image": image, "text": text}
         if self.preprocesses:

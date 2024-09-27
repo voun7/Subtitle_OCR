@@ -1,4 +1,5 @@
 import subprocess
+from os import cpu_count
 
 
 def generate_trdg_images(lang: str = "ch", count: int = 4_000_000) -> None:
@@ -22,7 +23,7 @@ def generate_trdg_images(lang: str = "ch", count: int = 4_000_000) -> None:
         "--output_dir", f"{dataset_dir}/{lang}",  # The output directory.
         "--count", str(count),  # The number of images to be created.
         "--random",  # Define if the produced string will have variable word count (with --length being the maximum).
-        "--thread_count", "20",  # Define the number of thread to use for image generation.
+        "--thread_count", str(cpu_count()),  # Define the number of thread to use for image generation.
         "--background", "3",  # Background to use. 0: Gaussian Noise, 1: Plain white, 2: Quasi crystal, 3: Image.
         "--image_dir", f"{dataset_dir}/#Background_images",  # Image directory to use when background is set to image.
         "--text_color", "#FFFFFF",  # Text's color. "#000000,#FFFFFF" for black to white range.
@@ -40,12 +41,14 @@ def generate_trdg_images(lang: str = "ch", count: int = 4_000_000) -> None:
         command.extend([
             "--language", lang,  # The language to use.
             "--length", "2",  # Define how many words should be included in each generated sample.
+            "--margins", "5,10,15,10",
         ])
     elif lang == "ch":
         command.extend([
             "--language", "cn",  # The language to use. (trdg uses cn for chinese)
             "--length", "12",  # Define how many characters should be included in each generated sample.
             "--space_width", "0",  # Define the width of the spaces between words
+            "--margins", "0,10,20,10",
         ])
     print(f"Command: {' '.join(command)}")
     try:
