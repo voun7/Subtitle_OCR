@@ -1,3 +1,6 @@
+from os import environ
+
+environ["NO_ALBUMENTATIONS_UPDATE"] = "1"
 import albumentations as A
 import cv2 as cv
 import numpy as np
@@ -57,8 +60,10 @@ class TextDetectionDataset(Dataset):
             A.Affine(scale=(0.75, 1.2), rotate=(-10, 10), p=1),
             A.RandomBrightnessContrast(p=0.5),  # Random brightness and contrast adjustment
             A.HueSaturationValue(p=0.5),  # Change hue, saturation, and value of the image
-            A.RandomShadow(p=0.4),
-            A.RGBShift(p=0.5),  # Shift RGB values
+            A.RandomShadow(p=0.5),
+            A.CLAHE(p=0.6),
+            A.RGBShift(p=0.8),  # Shift RGB values
+            A.ChannelShuffle(p=0.8),
             A.HorizontalFlip(p=0.5),  # Random horizontal flip
             A.Rotate(limit=15),  # Random rotation in the range (-15, 15)
             A.GaussNoise(p=0.3),  # Add random noise to the image
@@ -119,16 +124,18 @@ class TextRecognitionDataset(Dataset):
     def augmentations() -> A.Compose:
         augment_seq = A.Compose([
             # Geometric augmentations
-            A.Rotate(limit=3, border_mode=0, value=(0, 0, 0), p=0.5),  # Small rotations for text slant simulation
-            A.Affine(scale=(0.8, 1), p=0.6),
+            A.Rotate(limit=3, border_mode=0, value=(0, 0, 0), p=0.8),  # Small rotations for text slant simulation
+            A.Affine(scale=(0.8, 1), p=0.8),
             # Image quality changes (blur, noise)
+            A.Sharpen(p=0.6),
             A.Blur(blur_limit=5, p=0.4),
-            A.MotionBlur(blur_limit=3, p=0.6),  # Simulate motion blur
             A.GaussNoise(var_limit=(50.0, 100.0), p=0.3),  # Add Gaussian noise to simulate poor-quality images
             # Color augmentations
-            A.RandomShadow(p=0.5),
-            A.PixelDropout(p=0.8),
-            A.HueSaturationValue(10, sat_shift_limit=10, val_shift_limit=10, p=0.7),  # Slight color jitter
+            A.CLAHE(p=0.7),
+            A.RGBShift(p=0.8),
+            A.ChannelShuffle(p=0.8),
+            A.PixelDropout(p=0.6),
+            A.HueSaturationValue(10, sat_shift_limit=10, val_shift_limit=10, p=0.4),  # Slight color jitter
         ])
         return augment_seq
 

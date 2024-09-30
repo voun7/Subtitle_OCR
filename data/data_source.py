@@ -251,6 +251,37 @@ class SynthTextData:
             return self.load_image_labels(val_data)
 
 
+class SynthTextChineseData:
+    def __init__(self, data_type: str) -> None:
+        """
+        Chinese version of SynthText Dataset (det) (en & ch) (Line)
+        source: https://github.com/MichalBusta/E2E-MLT
+        """
+        self.data_type, self.dataset_dir = data_type, DATASET_DIR / "SynthText Chinese"
+        self.image_dir, self.labels_dir = self.dataset_dir / "images", self.dataset_dir / "labels"
+        self.ignore_tags = ["###"]
+
+    def load_data(self) -> list:
+        image_files, image_labels = list(self.image_dir.iterdir()), list(self.labels_dir.iterdir())
+        train_data, val_data = data_random_split(image_files, image_labels)
+        if self.data_type == "train":
+            image_files, image_labels = train_data
+        else:
+            image_files, image_labels = val_data
+        image_data = []
+        for image_path, label_path in zip(image_files, image_labels):
+            image_bb_txt, labels = [], label_path.read_text("utf-8").splitlines()
+            for label in labels:
+                label = label.split(',', maxsplit=9)
+                bbox, text = pairwise_tuples(map(float, label[:8])), label[9:][0].strip('\"')
+                if text in self.ignore_tags:
+                    continue
+                image_bb_txt.append({"bbox": bbox, "text": text})
+            if image_bb_txt:
+                image_data.append((image_path, image_bb_txt))
+        return image_data
+
+
 class TextOCR01Data:
     def __init__(self, data_type: str) -> None:
         """
@@ -362,6 +393,7 @@ def load_data(lang: str, model_type: str, data_type: str) -> list:
                 ICDAR2019LSVTFullData(data_type),
                 MSRATD500Data(data_type),
                 ICDAR2019ReCTSData(data_type),
+                SynthTextChineseData(data_type),
             )
         elif model_type == "rec":
             return merge_data_sources(
