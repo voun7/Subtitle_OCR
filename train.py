@@ -13,7 +13,7 @@ from sub_ocr.modeling import build_model
 from utilities.logger_setup import setup_logging
 from utilities.telegram_bot import TelegramBot
 from utilities.trainer import ModelTrainer
-from utilities.visualize import visualize_dataset
+from utilities.visualize import visualize_char_freq, visualize_dataset, visualize_model, visualize_feature_maps
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +33,13 @@ def build_datasets(lang: str, config: dict) -> tuple:
     return dataset(lang, "train", config), dataset(lang, "val", config)
 
 
+def display_visuals(model, dataset) -> None:
+    visualize_char_freq(dataset.img_data)
+    visualize_dataset(dataset, 10, 0)
+    visualize_model(model, dataset.image_height, dataset.image_width)
+    visualize_feature_maps(model, dataset[0]["image"])
+
+
 def train_model(model_dir: str, config_name: str, config: dict) -> None:
     params, model = config["Hyperparameters"], build_model(config)
     optimizer = build_optimizer(model, config["Optimizer"])
@@ -41,7 +48,7 @@ def train_model(model_dir: str, config_name: str, config: dict) -> None:
     logger.info(f"Loading {config_name} Data...")
     train_ds, val_ds = build_datasets(config["lang"], config["Dataset"])
     logger.info(f"Loading Completed... Dataset Size Train: {len(train_ds):,}, Val: {len(val_ds):,}")
-    visualize_dataset(train_ds)
+    display_visuals(model, train_ds)
 
     lr_scheduler = ReduceLROnPlateau(optimizer, patience=params["patience"])
     train_params = {"loss_fn": loss_fn, "metrics_fn": metric_fn, "optimizer": optimizer, "lr_scheduler": lr_scheduler,
