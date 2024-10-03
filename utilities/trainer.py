@@ -142,7 +142,7 @@ class ModelTrainer:
 
     def set_seed(self, seed: int) -> None:
         """
-        Set seed to remove randomness and enable reproducibility.
+        Set seed to remove randomness and enable reproducibility of the training process.
         """
         if seed:
             logger.debug(f"Seed set to: {seed}")
@@ -185,11 +185,25 @@ class ModelTrainer:
         """
         return timedelta(seconds=round(perf_counter() - start_time))
 
+    def update_writer(self) -> None:
+        """
+        Update the writer with the checkpoint data when the total epochs start above zero.
+        """
+        if not self.total_epochs:
+            return  # no checkpoint or no recorded data in checkpoint
+        for i in range(self.total_epochs):
+            self.writer.add_scalar("Learning Rate", self.learning_rates[i], i + 1)
+            self.writer.add_scalars("Training Loss", {k: self.losses[k][i] for k in self.losses}, i + 1)
+            self.writer.add_scalars("Training Metric", {k: self.metrics[k][i] for k in self.metrics}, i + 1)
+            self.writer.add_scalars("Validation Loss", {k: self.val_losses[k][i] for k in self.val_losses}, i + 1)
+            self.writer.add_scalars("Validation Metric", {k: self.val_metrics[k][i] for k in self.val_metrics}, i + 1)
+        logger.info("Writer Updated with Checkpoint data.")
+
     def train(self, seed: int = None) -> None:
         assert self.train_loader and self.val_loader, "Train or Val data loader has not been set!"
-        self.set_seed(seed)  # To ensure reproducibility of the training process
         start_time, self.writer = perf_counter(), SummaryWriter()
         best_model_wts = deepcopy(self.model.state_dict())  # Initial copy of model weights is saved
+        self.set_seed(seed), self.update_writer()
 
         for _ in range(self.epoch_stop):
             current_lr = self.get_lr()
@@ -268,7 +282,7 @@ class ModelTrainer:
             logger.warning("Checkpoint File Not Loaded or Does Not Exist.")
             return
         checkpoint_file = self.checkpoint_dir / checkpoint_file
-        logger.info(f"Checkpoint File Loaded! File: {checkpoint_file}")
+        logger.info(f"\nCheckpoint File Loaded! File: {checkpoint_file}")
         checkpoint = torch.load(checkpoint_file, weights_only=False)  # Load checkpoint dict
         # Restore state for model and optimizer
         self.model.load_state_dict(checkpoint["model_state_dict"])
