@@ -27,29 +27,6 @@ DATASET_DIR = Path(r"C:\Users\Victor\Documents\Python Datasets\Subtitle_OCR")
 # ]
 
 
-class ChStreetViewTxtRecData:
-    def __init__(self, data_type: str) -> None:
-        """
-        Chinese Scene Text Recognition Dataset (rec) (ch) (Word & Line)
-        source: https://aistudio.baidu.com/competition/detail/8/0/related-material
-        """
-        self.data_type, self.dataset_dir = data_type, DATASET_DIR / "Chinese Street View Text Recognition"
-        self.image_dir, self.labels_file = self.dataset_dir / "train", self.dataset_dir / "train.txt"
-
-    def load_data(self) -> list:
-        image_files = sorted(self.image_dir.iterdir(), key=lambda name: float(name.stem.split("_")[-1]))
-        image_labels = [label.split(maxsplit=3)[3:] for label in self.labels_file.read_text("utf-8").splitlines()]
-
-        train_data, val_data = data_random_split(image_files, image_labels)
-        if self.data_type == "train":
-            image_files, image_labels = train_data
-        else:
-            image_files, image_labels = val_data
-        image_data = [(file, [{"bbox": None, "text": image_labels[index][0].replace("\u3000", " ")}])
-                      for index, file in enumerate(image_files)]
-        return image_data
-
-
 class ICDAR2015Data:
     def __init__(self, data_type: str, model_type: str = None) -> None:
         """
@@ -382,7 +359,6 @@ def load_data(lang: str, model_type: str, data_type: str) -> list:
             )
         elif model_type == "rec":
             return merge_data_sources(
-                ICDAR2015Data(data_type, model_type),
                 TRDGSyntheticData(lang, data_type),
                 TRDGSyntheticData("sb", data_type),  # for symbols and en
             )
@@ -397,7 +373,6 @@ def load_data(lang: str, model_type: str, data_type: str) -> list:
             )
         elif model_type == "rec":
             return merge_data_sources(
-                ChStreetViewTxtRecData(data_type),
                 TRDGSyntheticData(lang, data_type),
                 TRDGSyntheticData("sb", data_type),  # for symbols and en
             )
