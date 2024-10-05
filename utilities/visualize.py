@@ -105,7 +105,7 @@ def visualize_char_freq(dataset: list) -> None:
     :param dataset: A list from the load_data function in the data_source module.
     """
     print("\nVisualizing Dataset Character Frequency...")
-    label_texts = "".join([ds["text"] for labels in dataset for ds in labels[1]]).replace("\ufeff", "")
+    label_texts = "".join([ds["text"] for labels in dataset for ds in labels[1]])
     counter = Counter(label_texts)
     counts = np.array(list(counter.values()))
     mean_freq, std_freq = np.mean(counts), np.std(counts)
