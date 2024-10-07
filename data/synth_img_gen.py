@@ -20,7 +20,8 @@ def generate_trdg_images(lang: str = "ch", count: int = 4_000_000) -> None:
         "--text_color", "#FFFFFF",  # Text's color. "#000000,#FFFFFF" for black to white range.
         "--name_format", "2",  # Define how the produced files will be named.
         "--format", "100",  # Define the height of the produced images if horizontal, else the width.
-        "--margins", "5,10,15,10",
+        "--margins", "5,10,15,10",  # Keep text center in the image.
+        "--stroke_width", "2",  # Create an outline around the text.
     ]
     if lang == "sb":
         command.extend(["--random_sequences"])  # Use random sequences as the source text for the generation.

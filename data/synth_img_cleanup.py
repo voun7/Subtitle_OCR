@@ -9,7 +9,7 @@ def check_images(blank_image_dir: Path, image_files: list) -> None:
     for image_file in image_files:
         image = cv.imread(str(image_file))
         image_mean = np.mean(image)
-        if image_mean < 5 or image_mean > 245:  # threshold for mostly black and mostly white images
+        if image_mean < 5 or image_mean > 250:  # threshold for mostly black and mostly white images
             image_file.rename(blank_image_dir / image_file.name)
             print(f"Image: {image_file.name}, Mean: {image_mean} moved to blank images dir")
 

@@ -128,7 +128,6 @@ class TextRecognitionDataset(Dataset):
             A.Affine(scale=(0.8, 1), p=0.8),
             # Image quality changes (blur, noise)
             A.Sharpen(p=0.6),
-            A.Blur(blur_limit=5, p=0.4),
             A.GaussNoise(var_limit=(50.0, 100.0), p=0.3),  # Add Gaussian noise to simulate poor-quality images
             # Color augmentations
             A.CLAHE(p=0.7),
