@@ -33,11 +33,11 @@ def build_datasets(lang: str, config: dict) -> tuple:
     return dataset(lang, "train", config), dataset(lang, "val", config)
 
 
-def display_visuals(model, dataset) -> None:
+def display_visuals(model, dataset, idx: int = 0) -> None:
     visualize_char_freq(dataset.img_data)
     visualize_dataset(dataset, 10, 0)
-    visualize_model(model, dataset.image_height, dataset.image_width)
-    visualize_feature_maps(model, dataset[0]["image"])
+    visualize_model(model, dataset[idx]["image"])
+    visualize_feature_maps(model, dataset[idx]["image"])
 
 
 def train_model(model_dir: str, config_name: str, config: dict) -> None:

@@ -1,3 +1,4 @@
+import logging
 import warnings
 from collections import Counter
 
@@ -9,8 +10,14 @@ from torch.utils.tensorboard import SummaryWriter
 
 from sub_ocr.utils import read_image, rescale, pascal_voc_bb, crop_image
 
+logging.getLogger("PIL.PngImagePlugin").setLevel(logging.WARNING)
+logging.getLogger("matplotlib.font_manager").setLevel(logging.WARNING)
+
 
 def get_scale_factor(img_frame: np.ndarray, img_target_height: int = 600) -> float:
+    """
+    Returns a value that can be used to resize the image to be equal or less than the target height.
+    """
     img_height = img_frame.shape[0]
     if img_height > img_target_height:
         rescale_factor = img_target_height / img_height
@@ -35,14 +42,14 @@ def visualize_np_image(image: np.ndarray, title: str, dsp_time: int) -> None:
     display_image(image, f"{f'{title} - ' if title else title}Image Rescale Value: {scale}", dsp_time)
 
 
-def visualize_dataset(dataset, num: int = 4, dsp_time: int = 2) -> None:
+def visualize_dataset(dataset, num: int, dsp_time: int) -> None:
     """
-    Select data at random to show how the preprocessed images in the dataset will be seen by the dataloader.
+    Select data at random from the dataset to show how the preprocessed images will be seen by the dataloader.
     :param dataset: Dataset to display.
     :param num: Total number of items to be retrieved from the dataset.
     :param dsp_time: Display time of image. 0 disables timer and keeps the image open until closed.
     """
-    print("Visualizing Dataset...")
+    print("\nVisualizing Dataset...")
     ds_len = len(dataset)
     for _ in range(num):
         idx = np.random.randint(ds_len)
@@ -73,18 +80,6 @@ def visualize_data(image_path: str, labels: list, crop_bbox: bool = True, put_te
     display_image(image, f"Image Rescale Value: {round(scale, 4) if scale else scale}")
 
 
-def visualize_model(model, image_height: int, image_width: int) -> None:
-    """
-    Visualize the model with a tensorboard graph.
-    """
-    with warnings.catch_warnings(action="ignore", category=torch.jit.TracerWarning):
-        dummy_input = torch.rand(4, 3, image_height, image_width)
-        writer = SummaryWriter(comment="_model_graph")
-        writer.add_graph(model, dummy_input)
-        writer.close()
-        print("\nModel Graph Created! Run 'tensorboard --logdir=runs' to view graph.")
-
-
 def visualize_char_freq(dataset: list) -> None:
     """
     Visualise the character frequency of the dataset.
@@ -113,7 +108,7 @@ def visualize_char_freq(dataset: list) -> None:
     print(f"Unique characters: {counter}\nUnique characters total: {len(counter):,}\n"
           f"Most common characters: {counter.most_common(10)}\n"
           f"Least common characters: {counter.most_common()[:-11:-1]}\n"
-          f"Mean frequency: {mean_freq:,.2f}\nStandard deviation of frequency: {std_freq:,.2f}\n")
+          f"Mean frequency: {mean_freq:,.2f}\nStandard deviation of frequency: {std_freq:,.2f}")
 
     # Plot the distribution of label frequencies
     plt.rcParams["font.family"] = "SimSun"
@@ -123,48 +118,74 @@ def visualize_char_freq(dataset: list) -> None:
     plt.show()
 
 
-def visualize_feature_maps(model, input_image: np.ndarray) -> None:
+def visualize_model(model, input_image: np.ndarray) -> None:
     """
-    Visualize model feature maps. Feature maps provide insights into what each convolutional layer is learning.
+    Visualize the model with a tensorboard graph.
     """
-    print("\nVisualizing model feature maps...")
+    with warnings.catch_warnings(action="ignore", category=torch.jit.TracerWarning):
+        input_image = torch.from_numpy(input_image).unsqueeze(0)
+        writer = SummaryWriter(comment="_model_graph")
+        writer.add_graph(model, input_image)
+        writer.close()
+        print("\nModel Graph Created! Run 'tensorboard --logdir=runs' to view graph.")
+
+
+def visualize_feature_maps(model, input_image: np.ndarray, debug: bool = False) -> None:
+    """
+    Visualize model feature maps. Feature maps provide insights into what each 2D convolutional layer is learning.
+    To capture the feature maps, forward hooks are registered to the conv layers.
+    A forward hook captures the output of a layer after the forward pass.
+    All feature maps will be displayed when debug is True.
+    """
+    print("\nVisualizing Model Feature Maps...")
     input_image = torch.from_numpy(input_image).unsqueeze(0)
+    feature_maps = {}  # A dictionary to store the feature maps
 
-    # Extract convolutional layers and their weights
-    conv_weights = []  # List to store convolutional layer weights
-    conv_layers = []  # List to store convolutional layers
-    total_conv_layers = 0  # Counter for total convolutional layers
+    # Hook function to store the outputs
+    def hook_fn(module, input_, output) -> None:
+        if debug:
+            print(f"Feature map layer: {module},\nInput shape: {input_[0].shape}, Output shape: {output.shape}\n")
+        feature_maps[module] = output
 
-    def flatten_model_children(model_, level: int = 1) -> None:
-        nonlocal total_conv_layers  # Declare to modify outer scope variable
-        for name, child in model_.named_children():
-            # print(level, name, type(child))
-            if isinstance(child, torch.nn.Conv2d):
-                conv_weights.append(child.weight), conv_layers.append(child)
-                total_conv_layers += 1
-            flatten_model_children(child, level + 1)
+    # Automatically find all Conv2d layers and register hooks
+    hooks = []
+    for name, layer in model.named_modules():
+        if isinstance(layer, torch.nn.Conv2d):
+            hook = layer.register_forward_hook(hook_fn)
+            hooks.append(hook)
+            if debug:
+                print(f"Hook registered to Name: {name}, Layer: {layer}")
+    print(f"Total Convolution 2D Layers: {len(hooks)}")
 
-    flatten_model_children(model)
-    print(f"Total convolution layers: {total_conv_layers}")
-    # todo: finish implementation of feature maps
+    _ = model(input_image)  # Extract feature maps with a forward pass
 
-    # # Extract feature maps
-    # feature_maps = []  # List to store feature maps
-    # layer_names = []  # List to store layer names
-    # for layer in conv_layers:
-    #     print(input_image.shape, layer)
-    #     input_image = layer(input_image)
-    #     feature_maps.append(input_image)
-    #     layer_names.append(str(layer))
+    # Remove the hooks to prevent memory leaks
+    for hook in hooks:
+        hook.remove()
 
-    # # Display feature maps shapes
-    # print("\nFeature maps shape")
-    # for feature_map in feature_maps:
-    #     print(feature_map.shape)
-    #
-    # # Process and visualize feature maps
-    # processed_feature_maps = []  # List to store processed feature maps
-    # for feature_map in feature_maps:
-    #     feature_map = feature_map.squeeze(0)  # Remove the batch dimension
-    #     mean_feature_map = torch.sum(feature_map, 0) / feature_map.shape[0]  # Compute mean across channels
-    #     processed_feature_maps.append(mean_feature_map.data.cpu().numpy())
+    # Visualize feature maps from all layers
+    for layer_num, (layer, feature_map) in enumerate(feature_maps.items(), 1):
+        if debug:
+            print(f"Visualizing feature maps #{layer_num} from layer {layer}")
+        else:
+            if layer_num == 4:
+                break
+        num_feature_maps = feature_map.size(1)  # Number of feature maps (channels)
+        num_cols = min(6, num_feature_maps)  # Number of columns for the plot grid
+        num_rows = (num_feature_maps + num_cols - 1) // num_cols  # Calculate number of rows
+
+        fig, axes = plt.subplots(num_rows, num_cols, figsize=(num_cols * 2, num_rows * 2))
+        axes = axes.flatten()  # Flatten axes for easy indexing
+
+        # Visualize all feature maps in the current layer
+        for i in range(num_feature_maps):
+            axes[i].imshow(feature_map[0, i].detach().cpu())
+            axes[i].axis('off')
+
+        # Remove any unused subplots (if feature maps < num_cols*num_rows)
+        for i in range(num_feature_maps, len(axes)):
+            fig.delaxes(axes[i])
+
+        fig.suptitle(f"Feature maps #{layer_num}, Layer: {layer}")  # Set the title of the figure
+        plt.tight_layout()
+        plt.show()

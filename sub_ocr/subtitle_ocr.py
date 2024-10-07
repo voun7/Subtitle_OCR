@@ -82,17 +82,6 @@ class SubtitleOCR:
                     "params": {"height": 48, "width": 320},
                     "PostProcess": {'name': 'CTCLabelDecode'}
                 },
-                "ch_ptocr_v4_rec_infer.pth": {
-                    "Architecture": {'model_type': 'rec', 'algorithm': 'SVTR_LCNet', 'Transform': None,
-                                     'Backbone': {'name': 'PPLCNetV3', 'scale': 0.95},
-                                     'Head': {'name': 'MultiHead', 'head_list': [
-                                         {'CTCHead': {
-                                             'Neck': {'name': 'svtr', 'dims': 120, 'depth': 2, 'hidden_dims': 120,
-                                                      'kernel_size': [1, 3], 'use_guide': True}}},
-                                         {'NRTRHead': {'nrtr_dim': 384, 'max_text_length': 25}}]}},
-                    "params": {"height": 48, "width": 320},
-                    "PostProcess": {'name': 'CTCLabelDecode'}
-                },
             },
         }
     }
