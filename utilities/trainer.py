@@ -113,7 +113,7 @@ class ModelTrainer:
         for key, value in dict_1.items():
             if isinstance(value, torch.Tensor):
                 value = value.item()
-            dict_1[key] = round(value, 4)
+            dict_1[key] = round(value, 5)
             dict_2.setdefault(key, []).append(value)
 
     def _mini_batch(self, validation: bool = False) -> tuple[dict, dict]:
@@ -136,8 +136,8 @@ class ModelTrainer:
             print(f"\rEpoch: {pos:.3f}, Batch {mode} Loss: {batch_loss}, Metric: {batch_metric}", end="", flush=True)
 
         logger.debug(f"Epoch: {self.total_epochs + 1}, Batch {mode} Duration: {self.dur_calc(start_time)}")
-        loss = {loss_name: np.mean(loss_values) for loss_name, loss_values in batch_losses.items()}
-        metric = {metric_name: np.mean(metric_values) for metric_name, metric_values in batch_metrics.items()}
+        loss = {loss_name: float(np.mean(loss_values)) for loss_name, loss_values in batch_losses.items()}
+        metric = {metric_name: float(np.mean(metric_values)) for metric_name, metric_values in batch_metrics.items()}
         return loss, metric
 
     def set_seed(self, seed: int) -> None:
@@ -209,12 +209,9 @@ class ModelTrainer:
             current_lr = self.get_lr()
             self.model.train()  # Sets model to TRAIN mode
             loss, metric = self._mini_batch()  # Performs training using mini-batches
-            self.append_dict_val(loss, self.losses), self.append_dict_val(metric, self.metrics)
-            # Validation
             self.model.eval()  # Sets model to EVAL mode
             with torch.no_grad():  # no gradients in validation!
-                val_loss, val_metric = self._mini_batch(validation=True)  # Performs evaluation using mini-batches
-                self.append_dict_val(val_loss, self.val_losses), self.append_dict_val(val_metric, self.val_metrics)
+                val_loss, val_metric = self._mini_batch(validation=True)  # Performs validation using mini-batches
 
             self.total_epochs += 1  # Keeps track of the total numbers of epochs
             self.record_values(loss, metric, val_loss, val_metric)
@@ -241,6 +238,8 @@ class ModelTrainer:
         """
         The logger and tensorboard writer will be used to record the values from the training and validation loop.
         """
+        self.append_dict_val(loss, self.losses), self.append_dict_val(metric, self.metrics)
+        self.append_dict_val(val_loss, self.val_losses), self.append_dict_val(val_metric, self.val_metrics)
         current_lr = self.get_lr()
         self.learning_rates.append(current_lr)
         if hasattr(self.metrics_fn, "get_metric"):
@@ -260,7 +259,7 @@ class ModelTrainer:
 
     def save_checkpoint(self) -> None:
         """
-        Builds dictionary with all elements for resuming training.
+        Build and save a checkpoint with a dictionary containing all the objects for resuming training.
         """
         checkpoint = {
             "model_state_dict": self.model.state_dict(), "optimizer_state_dict": self.optimizer.state_dict(),
@@ -308,9 +307,9 @@ class ModelTrainer:
         Save the model state and checkpoint from the last epoch.
         :param last_val_loss: Value of validation loss in the last epoch.
         """
-        model_name = self.model_dir / f"{self.model_filename} ({last_val_loss or self.best_val_loss}).pt"
-        torch.save(self.model.state_dict(), model_name)
-        logger.info(f"Model Saved! Name: {model_name}")
+        save_path = self.model_dir / f"{self.model_filename} ({last_val_loss or self.best_val_loss}).pt"
+        torch.save(self.model.state_dict(), save_path)
+        logger.info(f"Model Saved! Path: {save_path}")
 
     def create_model_checkpoint(self, model_file: str) -> None:
         """

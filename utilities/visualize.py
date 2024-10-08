@@ -155,7 +155,7 @@ def visualize_feature_maps(model, input_image: np.ndarray, debug: bool = False) 
             hooks.append(hook)
             if debug:
                 print(f"Hook registered to Name: {name}, Layer: {layer}")
-    print(f"Total Convolution 2D Layers: {len(hooks)}")
+    print(f"Total 2D Convolution Layers: {len(hooks)}")
 
     _ = model(input_image)  # Extract feature maps with a forward pass
 
