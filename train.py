@@ -33,11 +33,11 @@ def build_datasets(lang: str, config: dict) -> tuple:
     return dataset(lang, "train", config), dataset(lang, "val", config)
 
 
-def display_visuals(model, dataset, idx: int = 0) -> None:
-    visualize_char_freq(dataset.img_data)
-    visualize_dataset(dataset, 10, 0)
-    visualize_model(model, dataset[idx]["image"])
-    visualize_feature_maps(model, dataset[idx]["image"])
+def display_visuals(model, train_ds, val_ds, idx: int = 0) -> None:
+    visualize_char_freq(train_ds), visualize_char_freq(val_ds)
+    visualize_dataset(train_ds, 8, 0), visualize_dataset(val_ds, 6, 0)
+    visualize_model(model, val_ds[idx]["image"])
+    visualize_feature_maps(model, val_ds[idx]["image"])
 
 
 def train_model(model_dir: str, config_name: str, config: dict) -> None:
@@ -48,7 +48,7 @@ def train_model(model_dir: str, config_name: str, config: dict) -> None:
     logger.info(f"Loading {config_name} Data...")
     train_ds, val_ds = build_datasets(config["lang"], config["Dataset"])
     logger.info(f"Loading Completed... Dataset Size Train: {len(train_ds):,}, Val: {len(val_ds):,}")
-    display_visuals(model, train_ds)
+    display_visuals(model, train_ds, val_ds)
 
     lr_scheduler = ReduceLROnPlateau(optimizer, patience=params["patience"])
     train_params = {"loss_fn": loss_fn, "metrics_fn": metric_fn, "optimizer": optimizer, "lr_scheduler": lr_scheduler,

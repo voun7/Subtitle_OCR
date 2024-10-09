@@ -49,7 +49,7 @@ def visualize_dataset(dataset, num: int, dsp_time: int) -> None:
     :param num: Total number of items to be retrieved from the dataset.
     :param dsp_time: Display time of image. 0 disables timer and keeps the image open until closed.
     """
-    print("\nVisualizing Dataset...")
+    print(f"\nVisualizing {dataset.data_type.capitalize()} Dataset...")
     ds_len = len(dataset)
     for _ in range(num):
         idx = np.random.randint(ds_len)
@@ -80,7 +80,7 @@ def visualize_data(image_path: str, labels: list, crop_bbox: bool = True, put_te
     display_image(image, f"Image Rescale Value: {round(scale, 4) if scale else scale}")
 
 
-def visualize_char_freq(dataset: list) -> None:
+def visualize_char_freq(dataset) -> None:
     """
     Visualise the character frequency of the dataset.
     Mean Frequency: This is the average number of occurrences for each character across the dataset. If the mean is
@@ -97,10 +97,10 @@ def visualize_char_freq(dataset: list) -> None:
     underfitting for those labels. A high standard deviation indicates that some labels dominate the dataset, which can
     bias the model towards these labels and result in poor generalization to other labels.
 
-    :param dataset: A list from the load_data function in the data_source module.
+    :param dataset: Dataset to display. A list from the load_data function in the data_source module is used.
     """
-    print("\nVisualizing Dataset Character Frequency...")
-    label_texts = "".join([ds["text"] for labels in dataset for ds in labels[1]])
+    print(f"\nVisualizing {dataset.data_type.capitalize()} Dataset Character Frequency...")
+    label_texts = "".join([ds["text"] for labels in dataset.img_data for ds in labels[1]])
     counter = Counter(label_texts)
     counts = np.array(list(counter.values()))
     mean_freq, std_freq = np.mean(counts), np.std(counts)

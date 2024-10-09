@@ -122,9 +122,9 @@ class ModelTrainer:
         :param validation: Determines which loader and corresponding step function is going to be used
         """
         if validation:
-            data_loader, step_fn, mode = self.val_loader, self.val_step_fn, "Validation"
+            data_loader, step_fn, mode = self.val_loader, self.val_step_fn, "Val"
         else:
-            data_loader, step_fn, mode = self.train_loader, self.train_step_fn, "Training"
+            data_loader, step_fn, mode = self.train_loader, self.train_step_fn, "Train"
 
         batch_losses, batch_metrics, num_of_batches, start_time = {}, {}, len(data_loader), perf_counter()
         for index, batch in enumerate(data_loader):
@@ -247,8 +247,8 @@ class ModelTrainer:
             self.append_dict_val(more_val_metric, self.val_metrics), val_metric.update(more_val_metric)
         self.clear_previous_print()
         logger.info(f"Epoch: {self.total_epochs}/{self.num_epochs}, Current lr={current_lr},\n"
-                    f"Training Loss: {loss}, Metric: {metric}{'\n' if len(loss) > 1 else ' | '}"
-                    f"Validation Loss: {val_loss}, Metric: {val_metric}")
+                    f"Train Loss: {loss}, Metric: {metric}{'\n' if len(loss) > 1 else ' | '}"
+                    f"Val Loss: {val_loss}, Metric: {val_metric}")
 
         # Records the values for each epoch on the writer
         self.writer.add_scalar("Learning Rate", current_lr, self.total_epochs)
