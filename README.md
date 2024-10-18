@@ -39,16 +39,17 @@ python -m build
 pip install git+https://github.com/voun7/Subtitle_OCR.git
 ```
 
-[OCR Models](https://1drv.ms/f/s!AjcgvUnda0Imi_UAUiJ__YWl6D8lZA) - Place downloaded models in `saved models` folder
+[OCR Models](https://www.dropbox.com/scl/fo/gkfzxqctfvnp600b9yy1x/ACIXdjd1JN2xjNX8ZKsuAHw?rlkey=zh2fzkz5gth8mohhb3gw2awe0&st=2jl1lq3e&dl=0) -
+Models will be downloaded and placed in `saved models` folder
 
 ``` python
 from sub_ocr import SubtitleOCR
 
-reader = SubtitleOCR("en")  # this needs to run only once to load the models into memory
+reader = SubtitleOCR("en", "saved models")  # this needs to run only once to load the models into memory
 result = reader.ocr("image_1.jpg")
 ```
 
-The output will be in a list format, each item represents a bounding box, the text detected and confident level,
+The output will be in a list format, each item represents a bounding box, the text detected and confidence score,
 respectively.
 
 ```
