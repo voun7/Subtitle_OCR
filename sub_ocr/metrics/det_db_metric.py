@@ -104,7 +104,7 @@ class RunningScore:
         acc_cls = np.nanmean(acc_cls)
         iu = np.diag(hist) / (hist.sum(axis=1) + hist.sum(axis=0) - np.diag(hist) + 0.0001)
         mean_iu = np.nanmean(iu)
-        return {'Overall Acc': acc, 'Mean Acc': acc_cls, 'Mean IoU': mean_iu}
+        return {'Overall Acc': float(acc), 'Mean Acc': float(acc_cls), 'Mean IoU': float(mean_iu)}
 
     def reset(self):
         self.confusion_matrix = np.zeros((self.n_classes, self.n_classes))

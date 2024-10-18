@@ -181,18 +181,17 @@ class SubtitleOCR:
         groups = [sorted_bboxes[group_labels == i] for i in np.unique(group_labels)]
         return [{"bbox": self.merge_bboxes(bbs)} for bbs in groups]
 
-    def text_detector(self, image: np.ndarray, image_height: int, image_width: int) -> list:
+    def text_detector(self, image: np.ndarray, image_height: int, image_width: int) -> list | None:
         image = self.det_image_resize(image)
         image = torch.from_numpy(image).to(self.device)
         prediction = self.det_model(image.unsqueeze(0))
         batch = {"shape": [(image_height, image_width)]}
         bboxes, scores = self.det_post_process(batch, prediction)
         bboxes = bboxes[0][scores[0] > 0]  # Remove bbox indexes with a score of zero.
-        if self.det_params["sort_merge"]:
-            labels = self.sort_merge_bboxes(bboxes) if bboxes.size else []
-        else:
-            labels = [{"bbox": bb.tolist()} for bb in bboxes]
-        return labels
+        if not bboxes.size:
+            return
+        return self.sort_merge_bboxes(bboxes) if self.det_params["sort_merge"] else [{"bbox": bb.tolist()} for bb in
+                                                                                     bboxes]
 
     def recognizer(self, image: np.ndarray) -> tuple:
         image = self.rec_image_resize(image)
@@ -200,8 +199,10 @@ class SubtitleOCR:
         prediction = self.rec_model(image.unsqueeze(0))
         return self.rec_post_process(prediction)
 
-    def text_recognizer(self, image: np.ndarray, labels: list) -> list:
-        if labels:  # for labels with bbox
+    def text_recognizer(self, image: np.ndarray, labels: list | None) -> list:
+        if labels is None:
+            return []
+        elif labels:  # for labels with bbox
             for label in labels:
                 x_min, y_min, x_max, y_max = pascal_voc_bb(label["bbox"])
                 cropped_image = image[y_min:y_max, x_min:x_max]  # crop image with bbox

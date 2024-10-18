@@ -118,27 +118,27 @@ def visualize_char_freq(dataset) -> None:
     plt.show()
 
 
-def visualize_model(model, input_image: np.ndarray) -> None:
+def visualize_model(model, ds_data: dict) -> None:
     """
     Visualize the model with a tensorboard graph.
     """
     with warnings.catch_warnings(action="ignore", category=torch.jit.TracerWarning):
-        input_image = torch.from_numpy(input_image).unsqueeze(0)
+        input_image = torch.from_numpy(ds_data["image"]).unsqueeze(0)
         writer = SummaryWriter(comment="_model_graph")
         writer.add_graph(model, input_image)
         writer.close()
         print("\nModel Graph Created! Run 'tensorboard --logdir=runs' to view graph.")
 
 
-def visualize_feature_maps(model, input_image: np.ndarray, debug: bool = False) -> None:
+def visualize_feature_maps(model, ds_data: dict, debug: bool = False) -> None:
     """
     Visualize model feature maps. Feature maps provide insights into what each 2D convolutional layer is learning.
     To capture the feature maps, forward hooks are registered to the conv layers.
     A forward hook captures the output of a layer after the forward pass.
     All feature maps will be displayed when debug is True.
     """
-    print("\nVisualizing Model Feature Maps...")
-    input_image = torch.from_numpy(input_image).unsqueeze(0)
+    print(f"\nVisualizing Model Feature Maps...\nImage Path: {ds_data['image_path']}, Text: {ds_data.get('text')}")
+    input_image = torch.from_numpy(ds_data["image"]).unsqueeze(0)
     feature_maps = {}  # A dictionary to store the feature maps
 
     # Hook function to store the outputs

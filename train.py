@@ -36,8 +36,8 @@ def build_datasets(lang: str, config: dict) -> tuple:
 def display_visuals(model, train_ds, val_ds, idx: int = 0) -> None:
     visualize_char_freq(train_ds), visualize_char_freq(val_ds)
     visualize_dataset(train_ds, 8, 0), visualize_dataset(val_ds, 6, 0)
-    visualize_model(model, val_ds[idx]["image"])
-    visualize_feature_maps(model, val_ds[idx]["image"])
+    visualize_model(model, val_ds[idx])
+    visualize_feature_maps(model, val_ds[idx])
 
 
 def train_model(model_dir: str, config_name: str, config: dict) -> None:

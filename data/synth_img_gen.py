@@ -2,7 +2,7 @@ import subprocess
 from os import cpu_count
 
 
-def generate_trdg_images(lang: str = "ch", count: int = 4_000_000) -> None:
+def generate_trdg_images(lang: str, count: int) -> None:
     """
     Use trdg package to generate synthetic images with text for training model.
     Cleanup module should be used for deleting all images that have blended with the background.
@@ -46,4 +46,4 @@ def generate_trdg_images(lang: str = "ch", count: int = 4_000_000) -> None:
 
 
 if __name__ == '__main__':
-    generate_trdg_images()
+    generate_trdg_images("ch", 4_000_000)
