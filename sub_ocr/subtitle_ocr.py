@@ -13,6 +13,8 @@ from sub_ocr.modeling import build_model
 from sub_ocr.postprocess import build_post_process
 from sub_ocr.utils import read_image, normalize_img, pascal_voc_bb
 
+torch.set_num_threads(1)  # improves cpu performance
+
 logger = logging.getLogger(__name__)
 
 
@@ -107,12 +109,11 @@ class SubtitleOCR:
         """
         Download models from cloud if they are not available.
         """
-        if not self.models_dir.exists() or len(list(self.models_dir.iterdir())) < 1:
-            logger.warning("Model folder not found. Downloading models...")
+        if not self.models_dir.exists() or len(list(self.models_dir.iterdir())) < 2:
+            logger.warning("Models not found! Downloading models...")
             self.models_dir.mkdir(exist_ok=True)
-            url = ("https://www.dropbox.com/scl/fo/gkfzxqctfvnp600b9yy1x/"
-                   "ACIXdjd1JN2xjNX8ZKsuAHw?rlkey=zh2fzkz5gth8mohhb3gw2awe0&st=2jl1lq3e&dl=1")
-            response = requests.get(url)
+            response = requests.get("https://www.dropbox.com/scl/fo/gkfzxqctfvnp600b9yy1x/"
+                                    "ACIXdjd1JN2xjNX8ZKsuAHw?rlkey=zh2fzkz5gth8mohhb3gw2awe0&st=2jl1lq3e&dl=1")
             with ZipFile(BytesIO(response.content)) as zip_file:
                 zip_file.extractall(self.models_dir)
                 logger.warning(f"Models downloaded. Names: {zip_file.namelist()}")
@@ -214,7 +215,7 @@ class SubtitleOCR:
             labels = [{"text": text, "score": score} for text, score in self.recognizer(image)]
         return labels
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def ocr(self, image_path: str, det: bool = True, rec: bool = True) -> list:
         image, image_height, image_width = read_image(image_path)
         labels = self.text_detector(image, image_height, image_width) if det else []

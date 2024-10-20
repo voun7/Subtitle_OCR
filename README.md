@@ -16,7 +16,7 @@ The training data is optimized for subtitle text images.
 For GPU
 
 ```
-pip install torch==2.4.1 torchvision==0.19.1 --index-url https://download.pytorch.org/whl/cu124
+pip install torch==2.5.0 torchvision==0.20.0 --index-url https://download.pytorch.org/whl/cu124
 ```
 
 For CPU and/or Other Packages
@@ -43,9 +43,9 @@ pip install git+https://github.com/voun7/Subtitle_OCR.git
 Models will be downloaded and placed in `saved models` folder
 
 ``` python
-from sub_ocr import SubtitleOCR
+from sub_ocr.subtitle_ocr import SubtitleOCR
 
-reader = SubtitleOCR("en", "saved models")  # this needs to run only once to load the models into memory
+reader = SubtitleOCR("ch", "saved models")  # this needs to run only once to load the models into memory
 result = reader.ocr("image_1.jpg")
 ```
 
