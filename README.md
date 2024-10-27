@@ -45,7 +45,7 @@ Models will be downloaded and placed in `saved models` folder
 ``` python
 from sub_ocr.subtitle_ocr import SubtitleOCR
 
-reader = SubtitleOCR("ch", "saved models")  # this needs to run only once to load the models into memory
+reader = SubtitleOCR("ch", "saved models")
 result = reader.ocr("image_1.jpg")
 ```
 

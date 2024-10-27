@@ -91,7 +91,7 @@ class SubtitleOCR:
         }
     }
 
-    def __init__(self, lang: str, models_dir: str, device: str = "cuda") -> None:
+    def __init__(self, lang: str, models_dir: str | Path, device: str = "cuda") -> None:
         """
         Subtitle OCR package.
         :param lang: Language for text detection and recognition.
@@ -101,21 +101,22 @@ class SubtitleOCR:
         assert lang in self.supported_languages, "Requested language is not available!"
         assert device in ["cpu", "cuda"], "Requested device is not available!"
         self.models_dir, self.device = Path(models_dir), device if torch.cuda.is_available() else "cpu"
-        self.maybe_download_models()
+        self.maybe_download_models(self.models_dir)
         self.det_model, self.det_post_process, self.det_params = self.init_model(lang, "det")
         self.rec_model, self.rec_post_process, self.rec_params = self.init_model(lang, "rec")
 
-    def maybe_download_models(self) -> None:
+    @staticmethod
+    def maybe_download_models(models_dir: Path) -> None:
         """
         Download models from cloud if they are not available.
         """
-        if not self.models_dir.exists() or len(list(self.models_dir.iterdir())) < 2:
+        if not models_dir.exists() or len(list(models_dir.iterdir())) < 2:
             logger.warning("Models not found! Downloading models...")
-            self.models_dir.mkdir(exist_ok=True)
+            models_dir.mkdir(exist_ok=True)
             response = requests.get("https://www.dropbox.com/scl/fo/gkfzxqctfvnp600b9yy1x/"
                                     "ACIXdjd1JN2xjNX8ZKsuAHw?rlkey=zh2fzkz5gth8mohhb3gw2awe0&st=2jl1lq3e&dl=1")
             with ZipFile(BytesIO(response.content)) as zip_file:
-                zip_file.extractall(self.models_dir)
+                zip_file.extractall(models_dir)
                 logger.warning(f"Models downloaded. Names: {zip_file.namelist()}")
 
     def init_model(self, lang: str, model_type: str) -> tuple:
