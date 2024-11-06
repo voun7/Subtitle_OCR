@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="subtitle_ocr",
-    version="1.3.1",
+    version="1.3.2",
     packages=[
         'sub_ocr', 'sub_ocr.modeling', 'sub_ocr.modeling.heads', 'sub_ocr.modeling.necks', 'sub_ocr.modeling.backbones',
         'sub_ocr.modeling.transforms', 'sub_ocr.modeling.architectures', 'sub_ocr.postprocess', "sub_ocr.alphabets"
@@ -11,9 +11,9 @@ setup(
     package_data={"sub_ocr.alphabets": ["*.txt"]},
     install_requires=[
         "torch@https://download.pytorch.org/whl/cu124/"
-        "torch-2.5.0%2Bcu124-cp312-cp312-win_amd64.whl ;platform_system=='Windows'",
+        "torch-2.5.1%2Bcu124-cp312-cp312-win_amd64.whl ;platform_system=='Windows'",
         "torchvision@https://download.pytorch.org/whl/cu124/"
-        "torchvision-0.20.0%2Bcu124-cp312-cp312-win_amd64.whl ;platform_system=='Windows'",
+        "torchvision-0.20.1%2Bcu124-cp312-cp312-win_amd64.whl ;platform_system=='Windows'",
         "torchvision;platform_system!='Windows'", "opencv-python", "shapely", "pyclipper", "requests"
     ],
     url="https://github.com/voun7/Subtitle_OCR",

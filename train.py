@@ -63,6 +63,7 @@ def main() -> None:
     """
     Setup training from here.
     """
+    TelegramBot.credential_file = "credentials/telegram auth.json"
     tb, username = TelegramBot(), os.getlogin()
 
     model_dir = rf"C:\Users\{username}\OneDrive\Backups\Subtitle OCR Models"
@@ -84,7 +85,6 @@ def main() -> None:
 
 if __name__ == '__main__':
     setup_logging("training")
-    TelegramBot.credential_file = "credentials/telegram auth.json"
     logger.debug("Logging Started")
     main()
     logger.debug("Logging Ended")
