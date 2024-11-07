@@ -56,7 +56,8 @@ def train_model(model_dir: str, config_name: str, config: dict) -> None:
     trainer = ModelTrainer(model, train_params)
     trainer.set_loaders(train_ds, val_ds, params["batch_size"], params["val_batch_size"], params["num_workers"])
     trainer.load_checkpoint("")
-    trainer.train()
+    trainer.train_model()
+    trainer.save_model()
 
 
 def main() -> None:

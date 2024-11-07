@@ -10,8 +10,8 @@ class Im2Seq(nn.Module):
         self.out_channels = in_channels
 
     def forward(self, x):
-        B, C, H, W = x.shape
-        assert H == 1
+        # B, C, H, W = x.shape
+        # assert H == 1  # raises torch TracerWarning
         x = x.squeeze(dim=2)
         x = x.permute(0, 2, 1)  # (NTC)(batch, width, channels)
         return x

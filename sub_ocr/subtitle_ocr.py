@@ -9,7 +9,6 @@ import numpy as np
 import requests
 import torch
 
-from sub_ocr.modeling import build_model
 from sub_ocr.postprocess import build_post_process
 from sub_ocr.utils import read_image, normalize_img, pascal_voc_bb
 
@@ -32,11 +31,6 @@ class SubtitleOCR:
         "det": {
             "en": {
                 "en_det_ppocr_v3": {
-                    "Architecture": {'model_type': 'det', 'algorithm': 'DB', 'Transform': None,
-                                     'Backbone': {'name': 'MobileNetV3', 'scale': 0.5, 'model_name': 'large',
-                                                  'disable_se': True},
-                                     'Neck': {'name': 'RSEFPN', 'out_channels': 96, 'shortcut': True},
-                                     'Head': {'name': 'DBHead', 'k': 50}},
                     "params": {"height": 960, "width": 960, "m32": True, "sort_merge": True},
                     "PostProcess": {'name': 'DBPostProcess', 'thresh': 0.3, 'box_thresh': 0.6, 'max_candidates': 1000,
                                     'unclip_ratio': 2.5}
@@ -44,19 +38,11 @@ class SubtitleOCR:
             },
             "ch": {
                 "ch_PP-OCRv4_det_student": {
-                    "Architecture": {'model_type': 'det', 'algorithm': 'DB', 'Transform': None,
-                                     'Backbone': {'name': 'PPLCNetV3', 'scale': 0.75, 'det': True},
-                                     'Neck': {'name': 'RSEFPN', 'out_channels': 96, 'shortcut': True},
-                                     'Head': {'name': 'DBHead', 'k': 50}},
                     "params": {"height": 640, "width": 640, "m32": True, "sort_merge": True},
                     "PostProcess": {'name': 'DBPostProcess', 'thresh': 0.3, 'box_thresh': 0.6, 'max_candidates': 1000,
                                     'unclip_ratio': 2.5}
                 },
                 "ch_ptocr_v4_det_infer.pth": {
-                    "Architecture": {'model_type': 'det', 'algorithm': 'DB', 'Transform': None,
-                                     'Backbone': {'name': 'PPLCNetV3', 'scale': 0.75, 'det': True},
-                                     'Neck': {'name': 'RSEFPN', 'out_channels': 96, 'shortcut': True},
-                                     'Head': {'name': 'DBHead', 'k': 50}},
                     "params": {"height": 640, "width": 960, "m32": True, "sort_merge": False},
                     "PostProcess": {'name': 'DBPostProcess', 'thresh': 0.3, 'box_thresh': 0.6, 'max_candidates': 1000,
                                     'unclip_ratio': 2.5}
@@ -66,24 +52,12 @@ class SubtitleOCR:
         "rec": {
             "en": {
                 "en_PP-OCRv4_rec": {
-                    "Architecture": {'model_type': 'rec', 'algorithm': 'SVTR_LCNet', 'Transform': None,
-                                     'Backbone': {'name': 'PPLCNetV3', 'scale': 0.95},
-                                     'Neck': {'name': 'SequenceEncoder', 'encoder_type': 'svtr', 'dims': 120,
-                                              'depth': 2,
-                                              'hidden_dims': 120, 'kernel_size': [1, 3], 'use_guide': True},
-                                     'Head': {'name': 'CTCHead'}},
                     "params": {"height": 48, "width": 320},
                     "PostProcess": {'name': 'CTCLabelDecode'}
                 },
             },
             "ch": {
                 "ch_PP-OCRv4_rec": {
-                    "Architecture": {'model_type': 'rec', 'algorithm': 'SVTR_LCNet', 'Transform': None,
-                                     'Backbone': {'name': 'PPLCNetV3', 'scale': 0.95},
-                                     'Neck': {'name': 'SequenceEncoder', 'encoder_type': 'svtr', 'dims': 120,
-                                              'depth': 2,
-                                              'hidden_dims': 120, 'kernel_size': [1, 3], 'use_guide': True},
-                                     'Head': {'name': 'CTCHead'}},
                     "params": {"height": 48, "width": 320},
                     "PostProcess": {'name': 'CTCLabelDecode'}
                 },
@@ -123,18 +97,15 @@ class SubtitleOCR:
         Setup model and post processor.
         """
         config_name = self.default_configs[f"{model_type}_{self.lang}"]
-        config = self.configs[model_type][self.lang][config_name]
+        config = self.configs[model_type][self.lang][config_name] | {"lang": self.lang}
         if ".pt" in config_name:
             model_file = self.models_dir / config_name
         else:
             model_file = next(self.models_dir.glob(f"{config_name} *.pt"))  # best loss will be used
-        config.update({"lang": self.lang})
-        model, post_processor = build_model(config), build_post_process(config)
-
+        traced_model, post_processor = torch.jit.load(model_file, map_location=self.device), build_post_process(config)
+        traced_model.eval()
         logger.debug(f"Device: {self.device}, Model Config: {config},\nModel File: {model_file}")
-        model.load_state_dict(torch.load(model_file, self.device, weights_only=True))
-        model.to(self.device).eval()
-        return model, post_processor, config["params"]
+        return traced_model, post_processor, config["params"]
 
     def det_image_resize(self, image: np.ndarray) -> np.ndarray:
         scale = min(self.det_params["height"] / image.shape[0], self.det_params["width"] / image.shape[1])

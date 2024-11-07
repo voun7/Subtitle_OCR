@@ -1,5 +1,4 @@
 import logging
-import warnings
 from collections import Counter
 
 import cv2 as cv
@@ -122,12 +121,11 @@ def visualize_model(model, ds_data: dict) -> None:
     """
     Visualize the model with a tensorboard graph.
     """
-    with warnings.catch_warnings(action="ignore", category=torch.jit.TracerWarning):
-        input_image = torch.from_numpy(ds_data["image"]).unsqueeze(0)
-        writer = SummaryWriter(comment="_model_graph")
-        writer.add_graph(model, input_image)
-        writer.close()
-        print("\nModel Graph Created! Run 'tensorboard --logdir=runs' to view graph.")
+    input_image = torch.from_numpy(ds_data["image"]).unsqueeze(0)
+    writer = SummaryWriter(comment="_model_graph")
+    writer.add_graph(model, input_image)
+    writer.close()
+    print("\nModel Graph Created! Run 'tensorboard --logdir=runs' to view graph.")
 
 
 def visualize_feature_maps(model, ds_data: dict, debug: bool = False) -> None:

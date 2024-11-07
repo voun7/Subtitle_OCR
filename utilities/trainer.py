@@ -199,7 +199,7 @@ class ModelTrainer:
             self.writer.add_scalars("Validation Metric", {k: self.val_metrics[k][i] for k in self.val_metrics}, i + 1)
         logger.info("Writer Updated with Checkpoint data.")
 
-    def train(self, seed: int = None) -> None:
+    def train_model(self, seed: int = None) -> None:
         assert self.train_loader and self.val_loader, "Train or Val data loader has not been set!"
         start_time, self.writer = perf_counter(), SummaryWriter()
         best_model_wts = deepcopy(self.model.state_dict())  # Initial copy of model weights is saved
@@ -229,7 +229,6 @@ class ModelTrainer:
                 self.model.load_state_dict(best_model_wts)
 
         self.writer.close()  # Closes the writer
-        self.save_model(val_loss["loss"])
         logger.info(f"Model Training Completed. Duration: {self.dur_calc(start_time)}")
         logger.debug(f"Trainer Values:\n{self.losses=}\n{self.val_losses=}\n{self.metrics=}\n{self.val_metrics=}\n"
                      f"{self.learning_rates=}")
@@ -302,13 +301,16 @@ class ModelTrainer:
         logger.debug(f"Checkpoint Values:\n{self.losses=}\n{self.val_losses=}\n{self.metrics=}\n{self.val_metrics=}\n"
                      f"{self.learning_rates=}")
 
-    def save_model(self, last_val_loss: float = None) -> None:
+    def save_model(self) -> None:
         """
         Save the model state and checkpoint from the last epoch.
-        :param last_val_loss: Value of validation loss in the last epoch.
         """
-        save_path = self.model_dir / f"{self.model_filename} ({last_val_loss or self.best_val_loss}).pt"
-        torch.save(self.model.state_dict(), save_path)
+        save_path = self.model_dir / f"{self.model_filename} ({self.best_val_loss}).pt"
+        self.model.eval()
+        with torch.inference_mode():
+            dummy_input = torch.rand(1, 3, 48, 320, device=self.device)
+            traced_model = torch.jit.trace(self.model, dummy_input)
+            torch.jit.save(traced_model, save_path)
         logger.info(f"Model Saved! Path: {save_path}")
 
     def create_model_checkpoint(self, model_file: str) -> None:
