@@ -303,12 +303,13 @@ class ModelTrainer:
 
     def save_model(self) -> None:
         """
-        Save the model state and checkpoint from the last epoch.
+        Save a traced model with value of the last validation loss.
         """
-        save_path = self.model_dir / f"{self.model_filename} ({self.best_val_loss}).pt"
+        last_val_loss = round(self.val_losses["loss"][-1], 5) if self.val_losses.get("loss") else None
+        save_path = self.model_dir / f"{self.model_filename} ({last_val_loss}).pt"
         self.model.eval()
         with torch.inference_mode():
-            dummy_input = torch.rand(1, 3, 48, 320, device=self.device)
+            dummy_input = torch.rand(1, 3, 64, 320, device=self.device)
             traced_model = torch.jit.trace(self.model, dummy_input)
             torch.jit.save(traced_model, save_path)
         logger.info(f"Model Saved! Path: {save_path}")

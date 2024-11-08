@@ -40,7 +40,7 @@ def display_visuals(model, train_ds, val_ds, idx: int = 0) -> None:
     visualize_feature_maps(model, val_ds[idx])
 
 
-def train_model(model_dir: str, config_name: str, config: dict) -> None:
+def run_training(model_dir: str, config_name: str, config: dict) -> None:
     params, model = config["Hyperparameters"], build_model(config)
     optimizer = build_optimizer(model, config["Optimizer"])
     loss_fn, metric_fn = build_loss(config["Loss"]), build_metric(config)
@@ -76,7 +76,7 @@ def main() -> None:
     logger.debug(f"{config_name=}, {config=}")
 
     try:
-        train_model(model_dir, config_name, config)
+        run_training(model_dir, config_name, config)
         tb.send_telegram_message(f"Model Training Completed! {config_name=}")
     except Exception as error:
         error_msg = f"During Model Training an error occurred! {config_name=}\n{error=}"
