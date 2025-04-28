@@ -1,5 +1,4 @@
 import logging
-import os
 from io import BytesIO
 from pathlib import Path
 from zipfile import ZipFile
@@ -195,9 +194,8 @@ class SubtitleOCR:
 
 
 def test_ocr() -> None:
-    username = os.getlogin()
-    test_image_files = Path(rf"C:\Users\{username}\OneDrive\Public\test images")
-    test_sub_ocr = SubtitleOCR("ch", rf"C:\Users\{username}\OneDrive\Backups\Models\Subtitle_OCR")
+    test_image_files = Path.home() / r"OneDrive\Public\test images"
+    test_sub_ocr = SubtitleOCR("ch", rf"{Path.home()}\OneDrive\Backups\Models\Subtitle_OCR")
     for test_image in test_image_files.iterdir():
         test_outputs = test_sub_ocr.ocr(str(test_image))
         logger.info(test_image)
